@@ -1,8 +1,8 @@
 package parser
 
 import (
-	"minisql/src/Interpreter/lexer"
 	"testing"
+	"tonydb/RegionServer/minisql/src/Interpreter/lexer"
 )
 
 func TestFromStrLit(t *testing.T) {
@@ -35,7 +35,7 @@ func TestFromStrLit(t *testing.T) {
 
 	tk := keywordTokenizer{}
 	for _, c := range cases {
-		actual := tk.FromStrLit(c.lit,c.TokenType, c.lastToken)
+		actual := tk.FromStrLit(c.lit, c.TokenType, c.lastToken)
 		if actual != c.expect {
 			t.Errorf("Expected: %v, but actual: %v\n", c.expect, actual)
 		}

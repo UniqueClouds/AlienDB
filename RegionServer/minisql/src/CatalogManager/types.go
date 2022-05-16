@@ -2,21 +2,22 @@ package CatalogManager
 
 import (
 	"encoding/json"
-	"minisql/src/Interpreter/types"
-	"minisql/src/Interpreter/value"
+	"tonydb/RegionServer/minisql/src/Interpreter/types"
+	"tonydb/RegionServer/minisql/src/Interpreter/value"
 )
 
 //go:generate msgp
-type OnDelete=int
-type KeyOrder=int
-type ScalarColumnTypeTag=int
-type OperationType=int
+type OnDelete = int
+type KeyOrder = int
+type ScalarColumnTypeTag = int
+type OperationType = int
 
 type TableCatalogMap map[string]*TableCatalog
-const FolderPosition="./data/"
-const MiniSqlCatalogName="minisql.meta"
-const DatabaseNamePrefix="d_"
-const DatabaseCatalogPrefix="c_"
+
+const FolderPosition = "./data/"
+const MiniSqlCatalogName = "minisql.meta"
+const DatabaseNamePrefix = "d_"
+const DatabaseCatalogPrefix = "c_"
 const (
 	Bool ScalarColumnTypeTag = iota
 	Int64
@@ -36,12 +37,13 @@ const (
 	Asc KeyOrder = iota
 	Desc
 )
+
 type Column struct {
-	Name    string
-	Type    ColumnType
-	Unique bool
-	NotNull bool
-	ColumnPos int   //the created position when table is created, this Value is fixed
+	Name          string
+	Type          ColumnType
+	Unique        bool
+	NotNull       bool
+	ColumnPos     int //the created position when table is created, this Value is fixed
 	StartBytesPos int //the start postion in record bytes array
 }
 
@@ -61,17 +63,15 @@ type Cluster struct {
 	OnDelete  OnDelete
 }
 type TableCatalog struct {
-	TableName   string
-	ColumnsMap  map[string]Column
-	PrimaryKeys []Key
-	Cluster     Cluster
-	Indexs      []IndexCatalog
-	RecordCnt   int //RecordCnt means the now record number
-	RecordTotal int //RecordTotal means the total number
-	RecordLength int//RecordLength means a record length contains 3 parts, a vaild part , null bitmap, and record . use byte as the unit
+	TableName    string
+	ColumnsMap   map[string]Column
+	PrimaryKeys  []Key
+	Cluster      Cluster
+	Indexs       []IndexCatalog
+	RecordCnt    int //RecordCnt means the now record number
+	RecordTotal  int //RecordTotal means the total number
+	RecordLength int //RecordLength means a record length contains 3 parts, a vaild part , null bitmap, and record . use byte as the unit
 }
-
-
 
 // StoringClause is a storing clause info.
 type StoringClause struct {
@@ -95,7 +95,7 @@ type DatabaseCatalog struct {
 }
 
 type MiniSqlCatalog struct {
-	Databases    []DatabaseCatalog
+	Databases []DatabaseCatalog
 }
 type UniquesColumn struct {
 	ColumnName string
@@ -103,22 +103,22 @@ type UniquesColumn struct {
 	HasIndex   bool
 }
 
-func CreateTableStatement2TableCatalog(a *types.CreateTableStatement) *TableCatalog  {
-	aj,_:=json.Marshal(&a)
-	b:=new(TableCatalog)
-	_=json.Unmarshal(aj,b)
+func CreateTableStatement2TableCatalog(a *types.CreateTableStatement) *TableCatalog {
+	aj, _ := json.Marshal(&a)
+	b := new(TableCatalog)
+	_ = json.Unmarshal(aj, b)
 	return b
 }
-func CreateIndexStatement2IndexCatalog(a *types.CreateIndexStatement)*IndexCatalog  {
-	aj,_:=json.Marshal(&a)
-	b:=new(IndexCatalog)
-	_=json.Unmarshal(aj,b)
+func CreateIndexStatement2IndexCatalog(a *types.CreateIndexStatement) *IndexCatalog {
+	aj, _ := json.Marshal(&a)
+	b := new(IndexCatalog)
+	_ = json.Unmarshal(aj, b)
 	return b
 }
 
 func ColumnType2StringName(v ScalarColumnTypeTag) string {
 	switch v {
-	case Bool :
+	case Bool:
 		return "BOOL"
 	case Int64:
 		return "INT64"
@@ -142,21 +142,21 @@ func ColumnType2StringName(v ScalarColumnTypeTag) string {
 	return "UNKNOW"
 }
 
-
 //TableFilePrefix 获取表文件的前缀，请务必保证使用时候正在使用的数据库为你需要的
 func TableFilePrefix() string {
-	return FolderPosition+DatabaseNamePrefix+UsingDatabase.DatabaseId;
+	return FolderPosition + DatabaseNamePrefix + UsingDatabase.DatabaseId
 }
 
 //TableFilePrefixWithDB 获取表文件的前缀，请传入需要的dbid
 func TableFilePrefixWithDB(databaseId string) string {
-	return FolderPosition+DatabaseNamePrefix+databaseId;
+	return FolderPosition + DatabaseNamePrefix + databaseId
 }
+
 //DBFilePrefix 获取db cm文件的前缀
 func DBFilePrefix() string {
-	return FolderPosition+DatabaseNamePrefix
+	return FolderPosition + DatabaseNamePrefix
 }
 
 func DBCatalogPrefix() string {
-	return FolderPosition+DatabaseCatalogPrefix
+	return FolderPosition + DatabaseCatalogPrefix
 }

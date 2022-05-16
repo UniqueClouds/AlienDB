@@ -1,9 +1,5 @@
 package BackEnd
 
-import(
-	"testing"
-)
-
-func TestServer(t *testing.T) {
-	regist()
-}
+//func TestServer(t *testing.T) {
+//	regist()
+//}

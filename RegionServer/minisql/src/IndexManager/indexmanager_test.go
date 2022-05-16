@@ -3,11 +3,11 @@ package IndexManager
 import (
 	"fmt"
 	"math/rand"
-	"minisql/src/BufferManager"
-	"minisql/src/Interpreter/value"
 	"os"
 	"testing"
 	"time"
+	"tonydb/RegionServer/minisql/src/BufferManager"
+	"tonydb/RegionServer/minisql/src/Interpreter/value"
 )
 
 var info IndexInfo = IndexInfo{

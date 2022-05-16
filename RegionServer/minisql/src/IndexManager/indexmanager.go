@@ -1,11 +1,11 @@
 package IndexManager
 
 import (
-	"minisql/src/BufferManager"
-	"minisql/src/Interpreter/value"
-	"minisql/src/Utils"
 	"os"
 	"path/filepath"
+	"tonydb/RegionServer/minisql/src/BufferManager"
+	"tonydb/RegionServer/minisql/src/Interpreter/value"
+	"tonydb/RegionServer/minisql/src/Utils"
 )
 
 //go:generate msgp
@@ -188,8 +188,8 @@ func GetFirst(info IndexInfo, key_value value.Value, compare_type value.CompareT
 		switch compare_type {
 		case value.Equal:
 			for j := uint16(0); j < n; j++ {
-				res, _ := cur_node.getKey(j, info.Attr_type).Compare(key_value,compare_type)
-				if res  {
+				res, _ := cur_node.getKey(j, info.Attr_type).Compare(key_value, compare_type)
+				if res {
 					begin = true
 					new_result_node := new(ResultNode)
 					*new_result_node = ResultNode{

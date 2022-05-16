@@ -2,20 +2,20 @@ package parser
 
 import (
 	"log"
-	"minisql/src/Interpreter/lexer"
-	"minisql/src/Interpreter/types"
+	"tonydb/RegionServer/minisql/src/Interpreter/lexer"
+	"tonydb/RegionServer/minisql/src/Interpreter/types"
 )
 
 type lexerWrapper struct {
 	impl        *lexer.LexerImpl
-	channelSend     chan<- types.DStatements
+	channelSend chan<- types.DStatements
 	lastLiteral string
 	err         error
 }
 
-func newLexerWrapper(li *lexer.LexerImpl,channel  chan<- types.DStatements) *lexerWrapper {
+func newLexerWrapper(li *lexer.LexerImpl, channel chan<- types.DStatements) *lexerWrapper {
 	return &lexerWrapper{
-		impl: li,
+		impl:        li,
 		channelSend: channel,
 	}
 }

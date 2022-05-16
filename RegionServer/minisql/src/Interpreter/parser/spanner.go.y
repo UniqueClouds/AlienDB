@@ -3,8 +3,8 @@ package parser
 
 import (
     "strconv"
- Value	"minisql/src/Interpreter/value"
-	"minisql/src/Interpreter/types"
+ Value	"tonydb/RegionServer/minisql/src/Interpreter/value"
+	"tonydb/RegionServer/minisql/src/Interpreter/types"
 )
 %}
 

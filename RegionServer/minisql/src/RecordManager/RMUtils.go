@@ -2,42 +2,44 @@ package RecordManager
 
 import (
 	"errors"
-	"minisql/src/BufferManager"
-	"minisql/src/Utils"
 	"os"
+	"tonydb/RegionServer/minisql/src/BufferManager"
+	"tonydb/RegionServer/minisql/src/Utils"
 
 	"github.com/tinylib/msgp/msgp"
 
 	//"errors"
-	"minisql/src/CatalogManager"
-	"minisql/src/IndexManager"
-	"minisql/src/Interpreter/types"
-	"minisql/src/Interpreter/value"
+	"tonydb/RegionServer/minisql/src/CatalogManager"
+	"tonydb/RegionServer/minisql/src/IndexManager"
+	"tonydb/RegionServer/minisql/src/Interpreter/types"
+	"tonydb/RegionServer/minisql/src/Interpreter/value"
 )
 
 var FreeList IndexManager.FreeList
-const freeListFileHotFix="_list"
+
+const freeListFileHotFix = "_list"
+
 //每次insert前都进行load
 func loadFreeList(tableName string) error {
 	fileName := CatalogManager.TableFilePrefix() + "_data/" + tableName + freeListFileHotFix //文件名
-	if FreeList.Name == fileName {                                                  //已经load了
+	if FreeList.Name == fileName {                                                           //已经load了
 		return nil
-	} else if len(FreeList.Name) > 0 {//需要把旧的flush
+	} else if len(FreeList.Name) > 0 { //需要把旧的flush
 		err := FlushFreeList()
 		if err != nil {
 			return err
 		}
 	}
-	if !Utils.Exists(fileName) {  //如果没有这个文件 新建该文件并序列化写入初始name信息
+	if !Utils.Exists(fileName) { //如果没有这个文件 新建该文件并序列化写入初始name信息
 		newfile, err := Utils.CreateFile(fileName)
 		defer newfile.Close()
-		if err!=nil {
+		if err != nil {
 			return err
 		}
-		wt:=msgp.NewWriter(newfile)
-		FreeList.Name=fileName
-		err=FreeList.EncodeMsg(wt)
-		if err!=nil	 {
+		wt := msgp.NewWriter(newfile)
+		FreeList.Name = fileName
+		err = FreeList.EncodeMsg(wt)
+		if err != nil {
 			return err
 		}
 		return wt.Flush()
@@ -96,8 +98,8 @@ func getRecord(table *CatalogManager.TableCatalog, recordPosition dataNode) (boo
 	if err != nil {
 		return false, value.Row{}, err
 	}
-	nullmapBytes:=data[0:len(table.ColumnsMap)/8+1]
-	nullmap:=Utils.BytesToBools(nullmapBytes)
+	nullmapBytes := data[0 : len(table.ColumnsMap)/8+1]
+	nullmap := Utils.BytesToBools(nullmapBytes)
 
 	if nullmap[0] == false {
 		return false, value.Row{}, nil
@@ -120,17 +122,16 @@ func getRecord(table *CatalogManager.TableCatalog, recordPosition dataNode) (boo
 	return true, record, nil
 }
 
-
 func setRecord(table *CatalogManager.TableCatalog, recordPosition dataNode,
 	columnPos []int, startBytePos []int, values []value.Value) error {
 	data := make([]byte, table.RecordLength)
-	nullmapBytes:=data[0:len(table.ColumnsMap)/8+1]
-	nullmap:=Utils.BytesToBools(nullmapBytes)
+	nullmapBytes := data[0 : len(table.ColumnsMap)/8+1]
+	nullmap := Utils.BytesToBools(nullmapBytes)
 	nullmap[0] = true
 	for _, columnIndex := range columnPos {
 		nullmap[columnIndex+1] = true
 	}
-	nullmapBytes=Utils.BoolsToBytes(nullmap)
+	nullmapBytes = Utils.BoolsToBytes(nullmap)
 
 	copy(data[:], nullmapBytes)
 	for index, _ := range columnPos {
@@ -189,15 +190,14 @@ func deleteRecord(table *CatalogManager.TableCatalog, recordPosition dataNode) e
 	if err != nil {
 		return err
 	}
-	nullmapBytes:=data[0:len(table.ColumnsMap)/8+1]
-	nullmap:=Utils.BytesToBools(nullmapBytes)
-
+	nullmapBytes := data[0 : len(table.ColumnsMap)/8+1]
+	nullmap := Utils.BytesToBools(nullmapBytes)
 
 	nullmap[0] = false //变成可用
 
-	nullmapBytes=Utils.BoolsToBytes(nullmap)
+	nullmapBytes = Utils.BoolsToBytes(nullmap)
 	copy(data[:], nullmapBytes)
-	setRecordData(table.TableName,recordPosition,data,table.RecordLength)
+	setRecordData(table.TableName, recordPosition, data, table.RecordLength)
 	table.RecordCnt--
 	return nil
 }
@@ -206,16 +206,16 @@ func updateRecordData(table *CatalogManager.TableCatalog, recordPosition dataNod
 	//位图
 	nullmap := make([]bool, len(table.ColumnsMap)+1)
 	nullmap[0] = true
-  //设置为true
+	//设置为true
 	for i, val := range record.Values {
 		if val.Convert2IntType() != value.NullType {
 			nullmap[i+1] = true
 		}
 	}
 	//设置位bytes
-	nullbytes:=Utils.BoolsToBytes(nullmap)
+	nullbytes := Utils.BoolsToBytes(nullmap)
 
-	copy(data[:],nullbytes)
+	copy(data[:], nullbytes)
 	for i, value := range record.Values {
 		tmp, err := value.Convert2Bytes()
 		if err != nil {

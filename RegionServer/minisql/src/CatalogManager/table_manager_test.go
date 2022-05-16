@@ -2,14 +2,14 @@ package CatalogManager
 
 import (
 	"fmt"
-	"minisql/src/Interpreter/parser"
-	"minisql/src/Interpreter/types"
 	"strconv"
 	"strings"
 	"testing"
+	"tonydb/RegionServer/minisql/src/Interpreter/parser"
+	"tonydb/RegionServer/minisql/src/Interpreter/types"
 )
 
-var droptable=[]types.DropTableStatement{
+var droptable = []types.DropTableStatement{
 	{
 		"1",
 	},
@@ -17,11 +17,11 @@ var droptable=[]types.DropTableStatement{
 		"2",
 	},
 }
-var createtable=[]types.CreateTableStatement{
+var createtable = []types.CreateTableStatement{
 	{
 		"cxz666",
 		map[string]types.Column{
-			"first":{
+			"first": {
 				"first",
 				types.ColumnType{
 					types.Int64,
@@ -32,7 +32,7 @@ var createtable=[]types.CreateTableStatement{
 				false,
 				2,
 			},
-			"second":{
+			"second": {
 				"second",
 				types.ColumnType{
 					types.Float64,
@@ -43,7 +43,7 @@ var createtable=[]types.CreateTableStatement{
 				false,
 				0,
 			},
-			"third":{
+			"third": {
 				"third",
 				types.ColumnType{
 					types.Bytes,
@@ -54,7 +54,7 @@ var createtable=[]types.CreateTableStatement{
 				false,
 				3,
 			},
-			"fourth":{
+			"fourth": {
 				"fourth",
 				types.ColumnType{
 					types.Int64,
@@ -65,7 +65,7 @@ var createtable=[]types.CreateTableStatement{
 				true,
 				1,
 			},
-			"fifth":{
+			"fifth": {
 				"fifth",
 				types.ColumnType{
 					types.Bytes,
@@ -82,13 +82,12 @@ var createtable=[]types.CreateTableStatement{
 				"second",
 				types.Asc,
 			},
-
 		},
 		types.Cluster{},
 	},
 }
 
-var create_table_test_string=[]string{
+var create_table_test_string = []string{
 	"create table cxz ( " +
 		"column1 int not null,\n" +
 		"column2 char(30),\n" +
@@ -105,63 +104,64 @@ var create_table_test_string=[]string{
 		"primary key (column1)" +
 		");",
 }
-var drop_table_test_string=[]string{
+var drop_table_test_string = []string{
 	"drop table cxz;",
 	"drop table notsyf;",
 	"drop table syf;",
 	"drop table cxz66666;",
 }
+
 func TestCreateTable(t *testing.T) {
 	LoadDbMeta()
 	fmt.Println(CreateDatabase("123123"))
 	fmt.Println(CreateDatabase("4564546"))
 	fmt.Println(UseDatabase("4564546"))
 
-	for _,item:=range createtable {
+	for _, item := range createtable {
 		fmt.Println(CreateTableCheck(item))
 	}
-	for k,v:=range TableName2CatalogMap {
-		fmt.Println(k,*v)
+	for k, v := range TableName2CatalogMap {
+		fmt.Println(k, *v)
 	}
 	fmt.Println(UseDatabase("123123"))
-	for k,v:=range TableName2CatalogMap {
-		fmt.Println(k,*v)
+	for k, v := range TableName2CatalogMap {
+		fmt.Println(k, *v)
 	}
-	statementChannel=make(chan types.DStatements,100)
-	finishChannel=make(chan struct{},100)
+	statementChannel = make(chan types.DStatements, 100)
+	finishChannel = make(chan struct{}, 100)
 	go func() {
-		for item:=range statementChannel {
+		for item := range statementChannel {
 			fmt.Println(CreateTableCheck(item.(types.CreateTableStatement)))
-			finishChannel<- struct{}{}
+			finishChannel <- struct{}{}
 		}
 	}()
-	for _,item:=range create_table_test_string {
-		err:=parser.Parse(strings.NewReader(item),statementChannel)
+	for _, item := range create_table_test_string {
+		err := parser.Parse(strings.NewReader(item), statementChannel)
 		fmt.Println(err)
 		<-finishChannel
 	}
-	for k,v:=range TableName2CatalogMap {
-		fmt.Println(k,*v)
+	for k, v := range TableName2CatalogMap {
+		fmt.Println(k, *v)
 	}
 
 }
 func TestDropTable(t *testing.T) {
 	LoadDbMeta()
 	fmt.Println(UseDatabase("4564546"))
-	for k,_:=range TableName2CatalogMap{
+	for k, _ := range TableName2CatalogMap {
 		fmt.Println(DropTable(types.DropTableStatement{TableName: k}))
 	}
 	fmt.Println(UseDatabase("123123"))
-	statementChannel=make(chan types.DStatements,100)
-	finishChannel=make(chan struct{},100)
+	statementChannel = make(chan types.DStatements, 100)
+	finishChannel = make(chan struct{}, 100)
 	go func() {
-		for item:=range statementChannel {
+		for item := range statementChannel {
 			fmt.Println(DropTableCheck(item.(types.DropTableStatement)))
-			finishChannel<- struct{}{}
+			finishChannel <- struct{}{}
 		}
 	}()
-	for _,item:=range drop_table_test_string{
-		err:=parser.Parse(strings.NewReader(item),statementChannel)
+	for _, item := range drop_table_test_string {
+		err := parser.Parse(strings.NewReader(item), statementChannel)
 		fmt.Println(err)
 		<-finishChannel
 	}
@@ -169,16 +169,16 @@ func TestDropTable(t *testing.T) {
 func BenchmarkDropTable(b *testing.B) {
 	LoadDbMeta()
 	fmt.Println(UseDatabase("4564546"))
-	for i:=0;i<b.N;i++ {
+	for i := 0; i < b.N; i++ {
 		DropTable(types.DropTableStatement{TableName: strconv.Itoa(i)})
 	}
 }
 func BenchmarkCreateTable(b *testing.B) {
 	LoadDbMeta()
 	fmt.Println(UseDatabase("4564546"))
-	for i:=0;i<b.N;i++ {
-		new_table:=createtable[0]
-		new_table.TableName=strconv.Itoa(i)
+	for i := 0; i < b.N; i++ {
+		new_table := createtable[0]
+		new_table.TableName = strconv.Itoa(i)
 		CreateTableCheck(new_table)
 	}
 	fmt.Println(TableName2CatalogMap)

@@ -9,9 +9,9 @@ import __yyfmt__ "fmt"
 //line src/Interpreter/parser/spanner.go.y:3
 
 import (
-	"minisql/src/Interpreter/types"
-	Value "minisql/src/Interpreter/value"
 	"strconv"
+	"tonydb/RegionServer/minisql/src/Interpreter/types"
+	Value "tonydb/RegionServer/minisql/src/Interpreter/value"
 )
 
 //line src/Interpreter/parser/spanner.go.y:11

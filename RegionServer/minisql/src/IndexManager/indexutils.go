@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"minisql/src/BufferManager"
-	"minisql/src/Interpreter/value"
+	"tonydb/RegionServer/minisql/src/BufferManager"
+	"tonydb/RegionServer/minisql/src/Interpreter/value"
 )
 
 func (node bpNode) print(value_type value.ValueType) {
