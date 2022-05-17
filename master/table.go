@@ -1,9 +1,19 @@
-package MasterManagers
+package master
 
-import (
-	"container/list"
-	"net"
-)
+import "net"
+
+/* 一个用于记录各种信息的表
+* 需要如下结构
+*
+* list 记录所有连接过的从节点ip
+* map 映射当前活跃的从节点ip与每个ip对应的tablelist
+* 功能:
+1. 表的增加删除 addTable, deleteTable
+2. 根据表获得ip地址
+3. 负载均衡
+*/
+type tableManager struct {
+}
 
 type TableManager struct {
 	tableInfo       map[string]string
