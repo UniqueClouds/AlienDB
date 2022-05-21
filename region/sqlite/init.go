@@ -2,7 +2,7 @@ package sqlite
 
 import (
 	"database/sql"
-	"os"
+	"fmt"
 )
 
 var (
@@ -11,7 +11,7 @@ var (
 
 func init() {
 	var err error
-	os.Create("./foo2.db")
 	db, err = sql.Open("sqlite3", "./foo2.db")
+	fmt.Println(db)
 	checkErr(err)
 }

@@ -2,10 +2,16 @@ package sqlite
 
 import (
 	"fmt"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 func Query(sqlstring string) (string, error) {
-
+	//db, err := sql.Open("sqlite3", "./foo2.db")
+	//defer db.Close()
+	//if err != nil {
+	//	return "database open failed", err
+	//}
 	rows, err := db.Query(sqlstring) // ignore_security_alert
 	if err != nil {
 		return "query error check the sql statement", err
@@ -20,8 +26,8 @@ func Query(sqlstring string) (string, error) {
 	fmt.Println(l)
 	var resString string
 	for rows.Next() {
-		s := make([]string, l)
-		ps := make([]*string, l)
+		s := make([]interface{}, l)
+		ps := make([]*interface{}, l)
 		c := make([]interface{}, l)
 		for i := 0; i < l; i++ {
 			ps[i] = &s[i]
@@ -31,7 +37,9 @@ func Query(sqlstring string) (string, error) {
 		if err != nil {
 			return "data find error, try another sql statement", err
 		}
-		resString = fmt.Sprintf("%s\n%s", resString, s)
+		resString = fmt.Sprintf("%s\n%v", resString, s)
 	}
+	//region test
+	fmt.Println(resString)
 	return resString, nil
 }
