@@ -1,13 +1,10 @@
 package sqlite
 
 import (
-	"database/sql"
 	"fmt"
 )
 
 func Query(sqlstring string) (string, error) {
-	db, err := sql.Open("sqlite3", "./foo.db")
-	checkErr(err)
 
 	rows, err := db.Query(sqlstring) // ignore_security_alert
 	if err != nil {
