@@ -1,4 +1,4 @@
-package SocketManager
+package master
 
 import (
 	"encoding/json"

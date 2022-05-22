@@ -9,6 +9,7 @@ type IpAddressInfo struct {
 	ipAddress   string // The value of the item; arbitrary.
 	tableNumber int    // The priority of the item in the queue.
 	index       int    // The index of the item in the heap.
+	ch 			chan string
 }
 
 type PriorityQueue []*IpAddressInfo
@@ -42,13 +43,22 @@ func (pq *PriorityQueue) Pop() any {
 	return ipAddressInfo
 }
 
+func (pq *PriorityQueue) find(ipAddress string) (int) {
+	index := 0
+	for ; index < pq.Len(); index++ {
+		if ipAddress == (*pq)[index].ipAddress {
+			break
+		}
+	}
+	return index
+}
+
 func (pq *PriorityQueue) getNextTwo() (string, string) {
 	old := *pq
 	firstLast := old[0]
 	secondLast := old[1]
-	old.update(firstLast, firstLast.ipAddress, firstLast.tableNumber-1)
-	old.update(secondLast, secondLast.ipAddress, secondLast.tableNumber-1)
-	*pq = old
+	// old.update(firstLast, firstLast.ipAddress, firstLast.tableNumber-1)
+	// old.update(secondLast, secondLast.ipAddress, secondLast.tableNumber-1)
 	return firstLast.ipAddress, secondLast.ipAddress
 }
 
@@ -68,7 +78,7 @@ func (pq *PriorityQueue) update(ipAddressInfo *IpAddressInfo, ipAddress string, 
 	heap.Fix(pq, ipAddressInfo.index)
 }
 
-func main() {
+func test() {
 	ipAddressInfos := map[string]int{
 		"banana": 3, "apple": 2, "pear": 4,
 	}
