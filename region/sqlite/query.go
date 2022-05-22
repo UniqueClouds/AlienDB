@@ -6,25 +6,26 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func Query(sqlstring string) (string, error) {
+func Query(sqlstring string) ([]map[string]interface{}, error) {
 	//db, err := sql.Open("sqlite3", "./foo2.db")
 	//defer db.Close()
 	//if err != nil {
 	//	return "database open failed", err
 	//}
 	rows, err := db.Query(sqlstring) // ignore_security_alert
+	var m []map[string]interface{}
 	if err != nil {
-		return "query error check the sql statement", err
+		return nil, err
 	}
 
 	input, err := rows.Columns()
 	if err != nil {
-		return "query error check the sql statement", err
+		return nil, err
 	}
 
 	l := len(input)
 	fmt.Println(l)
-	var resString string
+	//var resString string
 	for rows.Next() {
 		s := make([]interface{}, l)
 		ps := make([]*interface{}, l)
@@ -35,11 +36,16 @@ func Query(sqlstring string) (string, error) {
 		}
 		err = rows.Scan(c...)
 		if err != nil {
-			return "data find error, try another sql statement", err
+			return nil, err
 		}
-		resString = fmt.Sprintf("%s\n%v", resString, s)
+		temp := make(map[string]interface{})
+		for i, Col := range input {
+			temp[Col] = s[i]
+		}
+		m = append(m, temp)
+		//resString = fmt.Sprintf("%s\n%v", resString, s)
 	}
 	//region test
-	fmt.Println(resString)
-	return resString, nil
+	fmt.Println(m)
+	return m, nil
 }

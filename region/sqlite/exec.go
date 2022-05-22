@@ -4,7 +4,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func Exec(sqlString string) (string, error) {
+func Exec(sqlString string) ([]map[string]interface{}, error) {
 	//db, err := sql.Open("sqlite3", "./foo2.db")
 	//defer db.Close()
 	//if err != nil {
@@ -13,7 +13,7 @@ func Exec(sqlString string) (string, error) {
 	_, err := db.Exec(sqlString) // ignore_security_alert
 
 	if err != nil {
-		return "database open fail check if there is a database on the region", err
+		return nil, err
 	}
-	return "success", nil
+	return nil, nil
 }
