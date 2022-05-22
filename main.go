@@ -166,5 +166,7 @@ package main
 import "client"
 
 func main() {
-	client.RunClient()
+	//client.RunClient()
+	client.Interpreter("create table fuck;")
+	//client.Test()
 }
