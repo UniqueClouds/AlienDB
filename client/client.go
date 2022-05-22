@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"sort"
 	"strings"
 )
 
@@ -31,19 +32,24 @@ func RunClient() {
 		}
 		if strings.Contains(sql, "quit;") {
 			// 关闭socket 服务器
-			err := connMaster.Close()
+			msgStr, _ := json.Marshal(map[string]string{"kind": "quit"})
+			_, err := connMaster.Write(msgStr)
+			if err != nil {
+				panic(err)
+			}
+			err = connMaster.Close()
 			if err != nil {
 				panic(err)
 			}
 			break
 		}
 		//解析操作类型与表名
-		target := interpreter(sql)
+		target := Interpreter(sql)
 		if _, ok := target["error"]; ok {
 			fmt.Println(">>>输入有误，请重试！")
 		}
 		fmt.Println(">>>需要处理的表名是：" + target["name"])
-		//向主节点发送请求
+		//直接向主节点发送请求
 		sendToMaster(connMaster, &target)
 		//别管了
 		//if target["kind"] == "create" {
@@ -63,26 +69,51 @@ func RunClient() {
 	}
 }
 
+// 返回结果，与region统一
+type Result struct {
+	Error string              `json:"error"`
+	Data  []map[string]string `json:"data"`
+}
+
 func sendToMaster(connMaster net.Conn, target *map[string]string) {
 	//map转化为字符串
 	msgStr, _ := json.Marshal(*target)
-	//fmt.Println(msgStr)
+	fmt.Println(msgStr)
 	_, err := connMaster.Write(msgStr)
 	if err != nil {
 		panic(err)
 	}
-	data := make([]byte, 255)
-	msgRead, err := connMaster.Read(data)
+	rawData := make([]byte, 255)
+	msgRead, err := connMaster.Read(rawData)
 	if msgRead == 0 || err != nil {
 		panic(err)
 	} else {
-		result := make(map[string]string)
+		var result Result
+		data := make([]byte, msgRead)
+		copy(data, rawData)
 		//字符串转map
 		err = json.Unmarshal(data, &result)
-		if result["error"] == "" {
+		if result.Error == "" {
 			fmt.Println(">>>操作成功！")
 			if (*target)["kind"] == "select" {
-				fmt.Println(result["data"])
+				//打印查询结果
+				table := result.Data
+				var col []string
+				for i, row := range table {
+					if i == 0 {
+						for k := range table[0] {
+							fmt.Printf("%10s", k)
+							col = append(col, k)
+						}
+						sort.Strings(col)
+						fmt.Println("")
+					}
+					for _, name := range col {
+						fmt.Printf("%10s", row[name])
+					}
+					fmt.Println("")
+				}
+				//fmt.Println(result["data"])
 			}
 			//别管了
 			//if msg["kind"] == "create" {
@@ -92,7 +123,7 @@ func sendToMaster(connMaster net.Conn, target *map[string]string) {
 			//	fmt.Println(">>>缓存已更新！")
 			//}
 		} else {
-			fmt.Println(">>>异常：" + result["error"])
+			fmt.Println(">>>异常：" + result.Error)
 		}
 	}
 }
