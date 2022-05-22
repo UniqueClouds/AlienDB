@@ -6,27 +6,21 @@ import (
 	"net"
 )
 
-// 获取本机ip地址，方便客户端及从节点的连接
-func GetLocalIP() {
+// GetLocalIP 获取本机ip地址，方便客户端及从节点的连接
+func GetLocalIP() (string, error) {
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
 		fmt.Println("get local ip error : ", err)
-		return
+		return "", err
 	}
 	for _, addr := range addrs {
-		ipAddr, ok := addr.(*net.IPNet)
-		if !ok {
-			continue
+		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				return ipnet.IP.String(), nil
+			}
 		}
-		if ipAddr.IP.IsLoopback() {
-			continue
-		}
-		if !ipAddr.IP.IsGlobalUnicast() {
-			continue
-		}
-		fmt.Println("local ip: ", ipAddr.IP.String())
 	}
-	return
+	panic("unable to determine local ip!")
 }
 
 // 接受客户端tcp连接
@@ -57,9 +51,10 @@ func startClientService() {
 }
 
 // 接受从节点tcp连接
-func startRegionService() {
+func startRegionService(localIP string) {
 	// 监听从节点tcp连接
-	listen, err = net.Listen("tcp", "127.0.0.1:2380")
+	localIP = localIP + ":8000"
+	listen, err = net.Listen("tcp", localIP)
 	if err != nil {
 		fmt.Println("region net.Listen  error : ", err)
 		return

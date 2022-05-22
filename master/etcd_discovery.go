@@ -34,7 +34,8 @@ func NewServiceDiscover(endpoints []string) *ServiceDiscovery {
 }
 
 //WatchService 初始化服务列表和监视
-func (s *ServiceDiscovery) WatchService(prefix string) error {
+func (s *ServiceDiscovery) WatchService() error {
+	prefix := "/db/"
 	// 根据前缀获取现有的 key
 	resp, err := s.cli.Get(context.Background(), prefix, clientv3.WithPrefix())
 	if err != nil {
@@ -46,15 +47,15 @@ func (s *ServiceDiscovery) WatchService(prefix string) error {
 	}
 
 	// 监视前缀， 修改变更的 server
-	go s.watcher(prefix)
+	go s.watcher()
 	return nil
 }
 
 //watcher 监听key的前缀
-func (s *ServiceDiscovery) watcher(prefix string) {
+func (s *ServiceDiscovery) watcher() {
+	prefix := "/db/"
 	rch := s.cli.Watch(context.Background(), prefix, clientv3.WithPrefix())
 	log.Printf("watching prefix:%s now ...", prefix)
-
 	for wresp := range rch {
 		for _, ev := range wresp.Events {
 			switch ev.Type {
@@ -92,7 +93,6 @@ func (s *ServiceDiscovery) GetServices() []string {
 	for _, v := range s.serverList {
 		addrs = append(addrs, v)
 	}
-
 	return addrs
 }
 
@@ -105,13 +105,12 @@ func test() {
 	var endPoints = []string{"localhost:2379"}
 	ser := NewServiceDiscover(endPoints)
 	defer ser.Close()
-	ser.WatchService("/web/")
-	ser.WatchService("/gRPC/")
+	ser.WatchService()
+	//ser.WatchService("/gRPC/")
 	for {
 		select {
 		case <-time.Tick(10 * time.Second):
 			log.Println(ser.GetServices())
-
 		}
 	}
 }
