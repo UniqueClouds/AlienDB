@@ -24,7 +24,6 @@ func Query(sqlstring string) ([]map[string]interface{}, error) {
 	}
 
 	l := len(input)
-	fmt.Println(l)
 	//var resString string
 	for rows.Next() {
 		s := make([]interface{}, l)

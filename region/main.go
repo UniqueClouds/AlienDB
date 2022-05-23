@@ -23,6 +23,7 @@ type result struct {
 const (
 	queryStatement    = 1
 	nonQueryStatement = 2
+	quitStatement     = 3
 )
 
 func handle(input chan receive, output chan result) {
@@ -37,9 +38,10 @@ func handle(input chan receive, output chan result) {
 		switch rec.sqlType {
 		case queryStatement:
 			msg, err = sqlite.Query(rec.sqlStatement)
-
 		case nonQueryStatement:
 			msg, err = sqlite.Exec(rec.sqlStatement)
+		case quitStatement:
+			QuitChan <- "quit"
 		}
 
 		if err != nil {
@@ -49,7 +51,7 @@ func handle(input chan receive, output chan result) {
 		res.Data = msg
 
 		if err != nil {
-			QuitChan <- "err"
+			QuitChan <- err.Error()
 		} else {
 			output <- res
 		}
@@ -57,30 +59,36 @@ func handle(input chan receive, output chan result) {
 }
 
 func input(input chan receive) {
+	//for {
+	//json.Unmarshal()
+	//m := make(map[string]interface{})
 	//通信得到结果
 	temp := &receive{
-		//sqlStatement: "INSERT INTO userinfo(client_id, first_name, last_name) values(4,'2','3')",
+		sqlStatement: "INSERT INTO userinfo(client_id, first_name, last_name) values(4,'2','3')",
 		//sqlStatement: "CREATE TABLE `userinfo` (`till_id` INTEGER PRIMARY KEY AUTOINCREMENT, `client_id` VARCHAR(64) NULL, `first_name` VARCHAR(255) NOT NULL, `last_name` VARCHAR(255) NOT NULL, `guid` VARCHAR(255) NULL, `dob` DATETIME NULL, `type` VARCHAR(1))",
-		sqlStatement: "SELECT * FROM userinfo",
-		sqlType:      queryStatement,
+		//sqlStatement: "SELECT * FROM userinfo",
+		sqlType: nonQueryStatement,
 	}
 	input <- *temp
+	//}
 }
 
 func output(output chan result) {
-	outPutMsg := <-output
-	//通信返回结果
-	test, err := json.Marshal(outPutMsg)
-	if err != nil {
-		fmt.Println(test)
-	}
-	var res result
-	err = json.Unmarshal(test, &res)
-	if err != nil {
-		fmt.Println(res)
-	}
+	for {
+		outPutMsg := <-output
+		//通信返回结果
+		test, err := json.Marshal(outPutMsg)
+		if err != nil {
+			fmt.Println(test)
+		}
+		var res result
+		err = json.Unmarshal(test, &res)
+		if err != nil {
+			fmt.Println(res)
+		}
 
-	fmt.Println(outPutMsg)
+		fmt.Println(outPutMsg)
+	}
 }
 
 func main() {
@@ -96,10 +104,11 @@ func main() {
 	go output(OutputChannel)
 
 	toQuit := <-QuitChan
-	if toQuit == "err" {
-		fmt.Println("unexpected err occur")
-	} else {
+	if toQuit == "quit" {
 		fmt.Println("bye")
+	} else {
+		fmt.Println(toQuit)
+		fmt.Println("unexpected error , terminated")
 	}
 
 }

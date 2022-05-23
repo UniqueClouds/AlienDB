@@ -11,7 +11,7 @@ func Exec(sqlString string) ([]map[string]interface{}, error) {
 	//	return "database open failed", err
 	//}
 	_, err := db.Exec(sqlString) // ignore_security_alert
-
+	PrintLog(sqlString)
 	if err != nil {
 		return nil, err
 	}
