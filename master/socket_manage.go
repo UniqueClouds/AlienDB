@@ -4,105 +4,107 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"os"
 )
 
-// 获取本机ip地址，方便客户端及从节点的连接
-func GetLocalIP() {
-	addrs, err := net.InterfaceAddrs()
-	if err != nil {
-		fmt.Println("get local ip error : ", err)
-		return
-	}
-	for _, addr := range addrs {
-		ipAddr, ok := addr.(*net.IPNet)
-		if !ok {
-			continue
-		}
-		if ipAddr.IP.IsLoopback() {
-			continue
-		}
-		if !ipAddr.IP.IsGlobalUnicast() {
-			continue
-		}
-		fmt.Println("local ip: ", ipAddr.IP.String())
-	}
-	return
+//返回结果，与Region统一
+type result struct {
+	Error string                   `json:"error"`
+	Data  []map[string]interface{} `json:"data"`
 }
 
-// 接受客户端tcp连接
-func startClientService() {
-	// 监听客户端tcp连接
-	tcpAddr, err := net.ResolveTCPAddr("tcp", ":2379")
+// GetLocalIP 获取本机ip地址，方便客户端及从节点的连接
+func GetLocalIP() string {
+	host, _ := os.Hostname()
+	addrs, _ := net.LookupIP(host)
+	for _, addr := range addrs {
+		if addr.IsLoopback() {
+			continue
+		}
+		if ipv4 := addr.To4(); ipv4 != nil {
+			return ipv4.String()
+		}
+	}
+	return ""
+}
+
+// ListenRegion 监听Region， 端口号：2223
+func ListenRegion() {
+	localIP := GetLocalIP()
+	fmt.Println(">>> 本机IP", localIP)
+	fmt.Println(">>> Master 监听 Region 端口: 2223")
+	tcpAddr, err := net.ResolveTCPAddr("tcp", "localhost:2223")
 	if err != nil {
-		fmt.Println("client net.tcpAddr error : ", err)
+		fmt.Println(">>> Region net.tcpAddr error : ", err)
 		return
 	}
-
 	listen, err := net.ListenTCP("tcp", tcpAddr)
 	if err != nil {
-		fmt.Println("client net.Listen  error : ", err)
+		fmt.Println(">>> Region net.tcpAddr error : ", err)
 		return
 	}
-
 	for {
-		// 建立客户端连接
 		conn, err := listen.Accept()
 		if err != nil {
-			fmt.Println("client listen.Accept error : ", err)
+			fmt.Println(">>> Region net.tcpAddr error : ", err)
 			continue
 		}
-		// 专门开一个goroutine去处理连接
-		go startClient(conn)
+		go connectToRegion(conn)
 	}
 }
 
-// 接受从节点tcp连接
-func startRegionService() {
-	// 监听从节点tcp连接
-	listen, err = net.Listen("tcp", "127.0.0.1:2380")
-	if err != nil {
-		fmt.Println("region net.Listen  error : ", err)
-		return
+// 处理Region连接
+func connectToRegion(connRegion net.Conn) {
+	//defer connRegion.Close()
+	newRegion := &IpAddressInfo{
+		ipAddress: connRegion.RemoteAddr().String(),
+		index:     regionList.Len() + 1,
 	}
+	fmt.Println(">>> 新增Region ...")
+	regionList.Push(newRegion)
+	ReceiveChan := make(chan result, 500)
+	SendChan := make(chan map[string]string, 500)
 
-	for {
-		// 建立从节点连接
-		conn, err := listen.Accept()
-		if err != nil {
-			fmt.Println("region listen.Accept error : ", err)
-			continue
-		}
-		// 专门开一个goroutine去处理连接
-		go startRegion(conn)
+	request := make(map[string]string)
+	// example
+	request["kind"] = "select"
+	request["sql"] = "SELECT * FROM userinfo"
+	SendChan <- request
+
+	fmt.Println(">>> Region (地址" + connRegion.RemoteAddr().String() + ") Connected!!!")
+	// 发送消息
+	go send(connRegion, SendChan)
+
+	//go handle(ReceiveChan)
+	// 接收消息
+	go receive(connRegion, ReceiveChan)
+}
+
+func send(connRegion net.Conn, SendChan chan map[string]string) {
+	sendMsg := <-SendChan
+	fmt.Println(">>> 发送给Region 消息: ", sendMsg)
+	msgStr, _ := json.Marshal(sendMsg)
+	if _, err := connRegion.Write(msgStr); err != nil {
+		panic(err)
 	}
 }
 
-// 处理客户端连接
-func startClient(connClient net.Conn) {
-	defer connClient.Close()
-	data := make([]byte, 255)
-	msgRead, err := connClient.Read(data)
+func receive(connRegion net.Conn, ReceiveChan chan result) {
+	//通信得到结果
+	msg := make([]byte, 255)
+	msgRead, err := connRegion.Read(msg)
+	data := make([]byte, msgRead)
+	copy(data, msg)
 	if msgRead == 0 || err != nil {
 		panic(err)
 	} else {
-		request := make(map[string]string)
-		//字符串转map
-		err = json.Unmarshal(data, &request)
-		if request["error"] == "" {
-			tableName = request["name"]
-			actionKind = request["kind"]
-			// 后续对表进行处理
-
-			_, err := connClient.Write(msgStr) // 最后返回查询结果
-		} else {
-			fmt.Println(">>>异常：" + result["error"])
+		ans := result{
+			Error: "",
+			Data:  nil,
+		}
+		json.Unmarshal(data, &ans)
+		if ans.Error == "" {
+			fmt.Println(">>> 收到 Region 消息: ", ans.Data)
 		}
 	}
-}
-
-// 处理从节点连接
-func startRegion(conn net.TCPConn) {
-	defer conn.Close()
-	// 新建map记录新连接的从节点
-	// 容错容灾等
 }

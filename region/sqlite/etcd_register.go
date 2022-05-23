@@ -1,7 +1,8 @@
-package RegionServer
+package sqlite
 
 import (
 	"context"
+	"fmt"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"log"
 	"os"
@@ -10,18 +11,21 @@ import (
 	"time"
 )
 
+// reference: https://www.cnblogs.com/FireworksEasyCool/p/12890649.html
+
 // ServiceRegister 服务注册
 type ServiceRegister struct {
-	cli     *clientv3.Client
-	leaseID clientv3.LeaseID
-
+	cli     *clientv3.Client // etcd client
+	leaseID clientv3.LeaseID // 租约ID
+	// 租约keepalive 相应 chan
 	keepAlveChan <-chan *clientv3.LeaseKeepAliveResponse
-	key          string
-	val          string
+	key          string // key
+	val          string // value
 }
 
 // NewServiceRegister 创建租约注册服务
 func NewServiceRegister(endpoints []string, key, val string, lease int64, dialTimeout int) (*ServiceRegister, error) {
+	fmt.Println(">>> Region 向主节点注册服务中 ....")
 	cli, err := clientv3.New(clientv3.Config{
 		Endpoints:   endpoints,
 		DialTimeout: time.Duration(dialTimeout) * time.Second,
@@ -90,7 +94,8 @@ func (s *ServiceRegister) Close() error {
 
 func test() {
 	var endpoints = []string{"localhost:2379"}
-	ser, err := NewServiceRegister(endpoints, "/server/node1", "localhost:8000", 6, 5)
+	// 暂定名称
+	ser, err := NewServiceRegister(endpoints, "/db/region_01", "localhost:8000", 6, 5)
 	if err != nil {
 		log.Fatalln(err)
 	}
