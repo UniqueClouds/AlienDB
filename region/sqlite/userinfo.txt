@@ -1,0 +1,1 @@
+INSERT INTO userinfo(client_id, first_name, last_name) values(1,'1','1')

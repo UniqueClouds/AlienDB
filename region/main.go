@@ -29,63 +29,35 @@ const (
 
 func handle(input chan receive, output chan result) {
 	for {
-		rec := <-input
-		var (
-			res result
-			msg []map[string]interface{}
-			err error
-		)
+		select {
+		case rec := <-input:
+			//fmt.Println("rec", rec)
+			var (
+				res result
+				msg []map[string]interface{}
+				err error
+			)
 
-		switch rec.sqlType {
-		case queryStatement:
-			msg, err = sqlite.Query(rec.sqlStatement)
-		case nonQueryStatement:
-			msg, err = sqlite.Exec(rec.sqlStatement)
-		case quitStatement:
-			QuitChan <- "quit"
-		}
+			switch rec.sqlType {
+			case queryStatement:
+				msg, err = sqlite.Query(rec.sqlStatement)
 
-		if err != nil {
-			res.Error = err.Error()
-		}
-		res.Error = "success"
-		res.Data = msg
-
-		if err != nil {
-			QuitChan <- err.Error()
-		} else {
-			output <- res
-
-			select {
-			case rec := <-input:
-				//fmt.Println("rec", rec)
-				var (
-					res result
-					msg []map[string]interface{}
-					err error
-				)
-
-				switch rec.sqlType {
-				case queryStatement:
-					msg, err = sqlite.Query(rec.sqlStatement)
-
-				case nonQueryStatement:
-					msg, err = sqlite.Exec(rec.sqlStatement)
-				}
-				//fmt.Println("sqlExec", msg, err)
-				if err != nil {
-					res.Error = err.Error()
-				}
-				res.Error = ""
-				res.Data = msg
-				fmt.Println(">>> 得到结果: ", res)
-				if err != nil {
-					QuitChan <- "err"
-				} else {
-					output <- res
-				}
-
+			case nonQueryStatement:
+				msg, err = sqlite.Exec(rec.sqlStatement, "tablename")
 			}
+			//fmt.Println("sqlExec", msg, err)
+			if err != nil {
+				res.Error = err.Error()
+			}
+			res.Error = ""
+			res.Data = msg
+			fmt.Println(">>> 得到结果: ", res)
+			if err != nil {
+				QuitChan <- "err"
+			} else {
+				output <- res
+			}
+
 		}
 	}
 }
