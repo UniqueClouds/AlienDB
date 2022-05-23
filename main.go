@@ -163,10 +163,12 @@
 //}
 package main
 
-import "client"
+import "my/AlienDB/master"
 
 func main() {
+	master.RunMaster()
 	//client.RunClient()
-	client.Interpreter("create table fuck;")
+	//client.Interpreter("create table fuck;")
 	//client.Test()
+
 }

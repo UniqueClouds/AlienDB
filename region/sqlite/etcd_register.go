@@ -1,7 +1,8 @@
-package RegionServer
+package sqlite
 
 import (
 	"context"
+	"fmt"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"log"
 	"os"
@@ -24,6 +25,7 @@ type ServiceRegister struct {
 
 // NewServiceRegister 创建租约注册服务
 func NewServiceRegister(endpoints []string, key, val string, lease int64, dialTimeout int) (*ServiceRegister, error) {
+	fmt.Println(">>> Region 向主节点注册服务中 ....")
 	cli, err := clientv3.New(clientv3.Config{
 		Endpoints:   endpoints,
 		DialTimeout: time.Duration(dialTimeout) * time.Second,
