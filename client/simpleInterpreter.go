@@ -9,7 +9,7 @@ func Interpreter(sql string) map[string]string {
 	words := strings.Split(sql, " ")
 	result["kind"] = words[0]
 	result["join"] = "false"
-	if words[0] == "create" {
+	if words[0] == "create" || words[0] == "copy" {
 		result["name"] = words[2]
 	} else if words[0] == "update" || words[0] == "drop" || words[0] == "insert" || words[0] == "delete" {
 		name := strings.Trim(words[2], "();")
@@ -25,7 +25,7 @@ func Interpreter(sql string) map[string]string {
 			}
 		}
 	}
-	if result["name"][len(result["name"])-1] == ';' {
+	if len(result["name"]) > 0 && result["name"][len(result["name"])-1] == ';' {
 		result["name"] = string([]byte(result["name"])[:len(result["name"])-1])
 	}
 	result["sql"] = sql

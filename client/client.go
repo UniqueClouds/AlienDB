@@ -71,45 +71,81 @@ func RunClient() {
 
 // 返回结果，与region统一
 type Result struct {
-	Error string              `json:"error"`
-	Data  []map[string]string `json:"data"`
+	Error string                   `json:"error"`
+	Data  []map[string]interface{} `json:"data"`
 }
 
 func sendToMaster(connMaster net.Conn, target *map[string]string) {
 	//map转化为字符串
 	msgStr, _ := json.Marshal(*target)
-	fmt.Println(msgStr)
 	_, err := connMaster.Write(msgStr)
 	if err != nil {
 		panic(err)
 	}
+	fmt.Println(">>>消息发送成功！")
 	rawData := make([]byte, 255)
+	//rawDataCopy := make([]byte, 255)
 	msgRead, err := connMaster.Read(rawData)
+	//msgReadCopy, errCopy := connMaster.Read(rawDataCopy)
 	if msgRead == 0 || err != nil {
+		//if !(msgReadCopy == 0 || errCopy != nil) {
+		//	rawData = rawDataCopy
+		//	msgRead = msgReadCopy
+		//} else {
 		panic(err)
+		//}
 	} else {
 		var result Result
 		data := make([]byte, msgRead)
 		copy(data, rawData)
+		fmt.Println(">>>收到回复：" + string(data))
 		//字符串转map
 		err = json.Unmarshal(data, &result)
 		if result.Error == "" {
 			fmt.Println(">>>操作成功！")
 			if (*target)["kind"] == "select" {
 				//打印查询结果
+				fmt.Println(">>>查询结果如下：")
 				table := result.Data
 				var col []string
+				length := make(map[string]int)
 				for i, row := range table {
 					if i == 0 {
 						for k := range table[0] {
-							fmt.Printf("%10s", k)
+							//fmt.Printf("%10s", k)
 							col = append(col, k)
+							length[k] = len(k)
 						}
 						sort.Strings(col)
-						fmt.Println("")
+						//fmt.Println("")
 					}
 					for _, name := range col {
-						fmt.Printf("%10s", row[name])
+						strRowName := fmt.Sprint(row[name])
+						if len(strRowName) > length[name] {
+							length[name] = len(strRowName)
+						}
+						//fmt.Printf("%10v", row[name])
+					}
+				}
+				for i, name := range col {
+					if i == 0 {
+						fmt.Print("|")
+					}
+					for k := 0; k < length[name]-len(name)+1; k++ {
+						fmt.Print(" ")
+					}
+					fmt.Printf("%2s |", name)
+				}
+				fmt.Println("")
+				for _, row := range table {
+					for i, name := range col {
+						if i == 0 {
+							fmt.Print("|")
+						}
+						for j := 0; j < length[name]-len(fmt.Sprint(row[name]))+1; j++ {
+							fmt.Print(" ")
+						}
+						fmt.Printf("%v |", row[name])
 					}
 					fmt.Println("")
 				}
