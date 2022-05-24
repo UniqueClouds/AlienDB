@@ -43,6 +43,7 @@ const (
 	quitStatement     = 3
 	copyStatement     = 4
 	joinStatement     = 5
+	newStatement      = 6
 )
 
 func main() {
@@ -77,6 +78,13 @@ func handle(input chan receive, output chan result) {
 			res.Message = "ok"
 			res.Error = ""
 			switch rec.sqlType {
+			case newStatement:
+				for _, query := range rec.file {
+					msg, err = sqlite.Exec(query, rec.tableName)
+					if err != nil {
+						break
+					}
+				}
 			case copyStatement:
 				res.Message = "copy"
 				fmt.Println("复制表:", rec.tableName)
@@ -128,8 +136,16 @@ func input(connMaster net.Conn, input chan receive) {
 			json.Unmarshal(data, &request)
 			fmt.Println(">>> request.IpAddress", request.IpAddress)
 			fmt.Println(">>> 收到请求: ", request.IpAddress, request.Kind, request.Sql)
-			//fmt.Println("killall")
-			if request.Kind == "copy" {
+
+			if request.Kind == "new" {
+				temp := &receive{
+					sqlStatement: "",
+					sqlType:      newStatement,
+					tableName:    request.TableName,
+					ipAddress:    request.IpAddress,
+				}
+				input <- *temp
+			} else if request.Kind == "copy" {
 				temp := &receive{
 					sqlStatement: "",
 					sqlType:      copyStatement,
