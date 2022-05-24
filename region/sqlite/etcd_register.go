@@ -4,15 +4,12 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
-// reference: https://www.cnblogs.com/FireworksEasyCool/p/12890649.html
+// reference: https://bingjian-zhu.github.io/2020/05/14/etcd%E5%AE%9E%E7%8E%B0%E6%9C%8D%E5%8A%A1%E5%8F%91%E7%8E%B0/
 
 // ServiceRegister 服务注册
 type ServiceRegister struct {
@@ -93,21 +90,26 @@ func (s *ServiceRegister) Close() error {
 	return s.cli.Close()
 }
 
-func test() {
-	var endpoints = []string{"localhost:2379"}
+// RegionRegister 从节点服务注册功能
+func RegionRegister(localAddr string) {
+	var endpoints = []string{"localhost:2379", "172.20.10.3:2379"}
+	//localIP := GetLocalIP()
 	// 暂定名称
-	ser, err := NewServiceRegister(endpoints, "/db/region_01", "localhost:8000", 6, 5)
+	ser, err := NewServiceRegister(endpoints, "/db/region_01", localAddr, 6, 5)
 	if err != nil {
 		log.Fatalln(err)
 	}
 	// 监听续租相应 chan
 	go ser.ListenLeaseRespChan()
 
-	// 监听系统信号，等待 ctrl + c 系统信号通知服务关闭
-	c := make(chan os.Signal, 1)
-	go func() {
-		signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
-	}()
-	//log.Print("exit %v", <-c)
-	ser.Close()
+	for {
+
+	}
+	//// 监听系统信号，等待 ctrl + c 系统信号通知服务关闭
+	//c := make(chan os.Signal, 1)
+	//go func() {
+	//	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
+	//}()
+	////log.Print("exit %v", <-c)
+	//ser.Close()
 }

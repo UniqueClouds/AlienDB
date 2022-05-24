@@ -3,7 +3,23 @@ package sqlite
 import (
 	"fmt"
 	"net"
+	"os"
 )
+
+// GetLocalIP 获取本机ip地址，方便客户端及从节点的连接
+func GetLocalIP() string {
+	host, _ := os.Hostname()
+	addrs, _ := net.LookupIP(host)
+	for _, addr := range addrs {
+		if addr.IsLoopback() {
+			continue
+		}
+		if ipv4 := addr.To4(); ipv4 != nil {
+			return ipv4.String()
+		}
+	}
+	return ""
+}
 
 func ConnectToMaster() net.Conn {
 	var ip, port string

@@ -1,4 +1,4 @@
-package main
+package master
 
 import (
 	"encoding/json"
@@ -10,8 +10,8 @@ import (
 type regionRequest struct {
 	TableName string
 	IpAddress string
-	Kind string
-	Sql string
+	Kind      string
+	Sql       string
 }
 
 type clientResult struct {
@@ -20,11 +20,11 @@ type clientResult struct {
 }
 
 type regionResult struct {
-	Error string                   `json:"error"`
-	Data  []map[string]interface{} `json:"data"`
-	TableList []string 			   `json:"tableList"`
-	Message string				   `json:"message"`
-	ClientIP string 			   `json:"clientIp"`
+	Error     string                   `json:"error"`
+	Data      []map[string]interface{} `json:"data"`
+	TableList []string                 `json:"tableList"`
+	Message   string                   `json:"message"`
+	ClientIP  string                   `json:"clientIp"`
 }
 
 // GetLocalIP 获取本机ip地址，方便客户端及从节点的连接
@@ -89,8 +89,8 @@ func ListenRegion() {
 func sessionWithClient(connClient net.Conn) {
 	fmt.Println("> Master: Client " + connClient.RemoteAddr().String() + " Connected.")
 	newClient := &clientInfo{
-		ipAddress: connClient.RemoteAddr().String(),
-		resultQueue:	make(chan clientResult, 20),
+		ipAddress:   connClient.RemoteAddr().String(),
+		resultQueue: make(chan clientResult, 20),
 	}
 	clientQueue = append(clientQueue, newClient)
 	defer connClient.Close()
@@ -112,7 +112,7 @@ func handleClientRequest(connClient net.Conn) {
 			json.Unmarshal(data, &request)
 			if request["error"] == "" {
 				if request["join"] == "true" {
-					
+
 				} else if request["kind"] == "create" {
 					handleCreate(connClient.RemoteAddr().String(), request["name"], request["sql"])
 				} else {
@@ -129,11 +129,11 @@ func sendClientResult(connClient net.Conn) {
 	for {
 		if id := clientQueue.Find(connClient.RemoteAddr().String()); id >= 0 {
 			select {
-				case sendRlt := <-clientQueue[id].resultQueue :
-					fmt.Printf("> Master: Send to client(%s) [%s].\n", connClient.RemoteAddr().String(), sendRlt.Data)
-					msgStr, _ := json.Marshal(sendRlt)
-					if _, err := connClient.Write(msgStr); err != nil {
-						panic(err)
+			case sendRlt := <-clientQueue[id].resultQueue:
+				fmt.Printf("> Master: Send to client(%s) [%s].\n", connClient.RemoteAddr().String(), sendRlt.Data)
+				msgStr, _ := json.Marshal(sendRlt)
+				if _, err := connClient.Write(msgStr); err != nil {
+					panic(err)
 				}
 			}
 		}
@@ -143,9 +143,9 @@ func sendClientResult(connClient net.Conn) {
 func sessionWithRegion(connRegion net.Conn) {
 	fmt.Println("> Master: Region " + connRegion.RemoteAddr().String() + " Connected.")
 	newRegion := &IpAddressInfo{
-		ipAddress: connRegion.RemoteAddr().String(),
-		requestQueue:	make(chan regionRequest, 20),
-		tableNumber: 0,
+		ipAddress:    connRegion.RemoteAddr().String(),
+		requestQueue: make(chan regionRequest, 20),
+		tableNumber:  0,
 	}
 	regionQueue.Push(newRegion)
 	fmt.Printf("> Master: There are now %d region connections.\n", regionQueue.Len())
@@ -158,11 +158,11 @@ func sendRegionRequest(connRegion net.Conn) {
 	for {
 		if id := regionQueue.find(connRegion.RemoteAddr().String()); id >= 0 {
 			select {
-				case sendMsg := <-regionQueue[id].requestQueue :
-					msgStr, _ := json.Marshal(sendMsg)
-					fmt.Printf("> Master: Send to region(%s) [%s].\n", connRegion.RemoteAddr().String(), sendMsg.Sql)
-					if _, err := connRegion.Write(msgStr); err != nil {
-						panic(err)
+			case sendMsg := <-regionQueue[id].requestQueue:
+				msgStr, _ := json.Marshal(sendMsg)
+				fmt.Printf("> Master: Send to region(%s) [%s].\n", connRegion.RemoteAddr().String(), sendMsg.Sql)
+				if _, err := connRegion.Write(msgStr); err != nil {
+					panic(err)
 				}
 			}
 		}
@@ -179,9 +179,9 @@ func handleRegionReceive(connRegion net.Conn) {
 			panic(err)
 		} else {
 			rec := regionResult{
-				Error: "",
-				Data:  nil,
-				Message: "",
+				Error:    "",
+				Data:     nil,
+				Message:  "",
 				ClientIP: "",
 			}
 			json.Unmarshal(data, &rec)

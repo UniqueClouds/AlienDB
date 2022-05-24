@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+var copyInfoChannel chan []copyTableInfo
+
 type ServiceDiscovery struct {
 	cli        *clientv3.Client
 	serverList map[string]string // 服务列表
@@ -56,7 +58,6 @@ func (s *ServiceDiscovery) WatchService() error {
 func (s *ServiceDiscovery) watcher() {
 	prefix := "/db/"
 	rch := s.cli.Watch(context.Background(), prefix, clientv3.WithPrefix())
-	fmt.Printf(">>> etcd: watching prefix:%s now ...", prefix)
 	log.Printf("watching prefix:%s now ...", prefix)
 	for wresp := range rch {
 		for _, ev := range wresp.Events {
@@ -64,10 +65,9 @@ func (s *ServiceDiscovery) watcher() {
 			case mvccpb.PUT: // 修改或者新增
 				s.SetServiceList(string(ev.Kv.Key), string(ev.Kv.Value))
 			case mvccpb.DELETE: // 删除
+				ip := string(ev.Kv.Value)
 				s.DelServiceList(string(ev.Kv.Key))
-				{
-
-				}
+				copyInfoChannel <- tableQueue.downRegionIp(ip)
 			}
 		}
 	}
@@ -108,12 +108,11 @@ func (s *ServiceDiscovery) Close() error {
 	return s.cli.Close()
 }
 
-func test() {
+func RunServiceDiscovery() {
 	var endPoints = []string{"localhost:2379"}
 	ser := NewServiceDiscover(endPoints)
 	defer ser.Close()
 	ser.WatchService()
-	//ser.WatchService("/gRPC/")
 	for {
 		select {
 		case <-time.Tick(10 * time.Second):
@@ -121,3 +120,17 @@ func test() {
 		}
 	}
 }
+
+//func test() {
+//	var endPoints = []string{"localhost:2379"}
+//	ser := NewServiceDiscover(endPoints)
+//	defer ser.Close()
+//	ser.WatchService()
+//	//ser.WatchService("/gRPC/")
+//	for {
+//		select {
+//		case <-time.Tick(10 * time.Second):
+//			log.Println(ser.GetServices())
+//		}
+//	}
+//}

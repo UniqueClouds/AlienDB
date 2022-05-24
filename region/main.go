@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	_ "github.com/mattn/go-sqlite3"
@@ -8,8 +9,6 @@ import (
 	"my/AlienDB/region/sqlite"
 	"net"
 	"os"
-	"os/signal"
-	"syscall"
 )
 
 var QuitChan chan string
@@ -17,13 +16,17 @@ var QuitChan chan string
 type receive struct {
 	sqlStatement string
 	sqlType      int
+	tableName    string
 	ipAddress    string
+	file         []string // 用于 copy table
 }
 
 type regionRequest struct {
+	TableName string
 	IpAddress string
 	Kind      string
 	Sql       string
+	File      []string // 用于 copy table
 }
 type result struct {
 	Error     string                   `json:"error"`
@@ -31,54 +34,34 @@ type result struct {
 	TableList []string                 `json:"tableList"`
 	Message   string                   `json:"message"`
 	ClientIP  string                   `json:"clientIP"`
+	File      []string                 `json:"file"`
 }
 
 const (
 	queryStatement    = 1
 	nonQueryStatement = 2
 	quitStatement     = 3
+	copyStatement     = 4
+	joinStatement     = 5
 )
 
 func main() {
 	defer sqlite.Close()
+	StatementChannel := make(chan receive, 500)
+	OutputChannel := make(chan result, 500)
+	QuitChan = make(chan string)
 	fmt.Println(">>> Region 启动中...")
-	func() {
-		var endpoints = []string{"localhost:2379"}
-		// 暂定名称
-		ser, err := sqlite.NewServiceRegister(endpoints, "/db/region_01", "localhost:8000", 6, 5)
-		if err != nil {
-			log.Fatalln(err)
-		}
-		// 监听续租相应 chan
-		go ser.ListenLeaseRespChan()
+	connMaster := sqlite.ConnectToMaster()
+	//go sqlite.RegionRegister()
 
-		// 监听系统信号，等待 ctrl + c 系统信号通知服务关闭
-		c := make(chan os.Signal, 1)
-		go func() {
-			signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
-		}()
-		ser.Close()
-	}()
-	//return
-	//var endpoints = []string{"localhost:2222"}
-	//StatementChannel := make(chan receive, 500)
-	//OutputChannel := make(chan result, 500)
-	//QuitChan = make(chan string)
-	//go func() {
-	//	ser, err := sqlite.NewServiceRegister(endpoints, "/db/region_01", "localhost:8000", 6, 5)
-	//	if err != nil {
-	//		fmt.Println(err)
-	//		log.Fatalln(err)
-	//	}
-	//	go ser.ListenLeaseRespChan()
-	//}()
-	//connMaster := sqlite.ConnectToMaster()
-	//defer connMaster.Close()
-	//go input(connMaster, StatementChannel)
-	//go handle(StatementChannel, OutputChannel)
-	//go output(connMaster, OutputChannel)
-	//for {
-	//}
+	go sqlite.RegionRegister(connMaster.LocalAddr().String())
+	fmt.Println(connMaster.LocalAddr())
+	defer connMaster.Close()
+	go input(connMaster, StatementChannel)
+	go handle(StatementChannel, OutputChannel)
+	go output(connMaster, OutputChannel)
+	for {
+	}
 
 }
 
@@ -94,6 +77,11 @@ func handle(input chan receive, output chan result) {
 			)
 
 			switch rec.sqlType {
+			case copyStatement:
+				res.Message = "copy"
+				fmt.Println("复制表:", rec.tableName)
+				// 复制表
+				res.File, err = getTableLog(rec.tableName)
 			case queryStatement:
 				fmt.Println("查询语句", rec.sqlStatement)
 				msg, err = sqlite.Query(rec.sqlStatement)
@@ -101,11 +89,10 @@ func handle(input chan receive, output chan result) {
 			case nonQueryStatement:
 				fmt.Println("执行语句", rec.sqlStatement)
 				//msg, err = sqlite.Exec(rec.sqlStatement)
-				msg, err = sqlite.Exec(rec.sqlStatement, "tablename")
+				msg, err = sqlite.Exec(rec.sqlStatement, rec.tableName)
 			}
 			//fmt.Println("sqlExec", msg, err)
 			res.Error = ""
-			res.Message = "OK"
 			if err != nil {
 				fmt.Println(">>> 出现错误!", err)
 				res.Error = err.Error()
@@ -137,18 +124,29 @@ func input(connMaster net.Conn, input chan receive) {
 			panic(err)
 		} else {
 			request := regionRequest{
+				TableName: "",
 				IpAddress: "",
 				Kind:      "",
 				Sql:       "",
+				File:      make([]string, 0),
 			}
 			json.Unmarshal(data, &request)
 			fmt.Println(">>> request.IpAddress", request.IpAddress)
 			fmt.Println(">>> 收到请求: ", request.IpAddress, request.Kind, request.Sql)
 			fmt.Println("killall")
-			if request.Kind == "select" {
+			if request.Kind == "copy" {
+				temp := &receive{
+					sqlStatement: "",
+					sqlType:      copyStatement,
+					tableName:    request.TableName,
+					ipAddress:    request.IpAddress,
+				}
+				input <- *temp
+			} else if request.Kind == "select" {
 				temp := &receive{
 					sqlStatement: request.Sql,
 					sqlType:      queryStatement,
+					tableName:    request.TableName,
 					ipAddress:    request.IpAddress,
 				}
 				input <- *temp
@@ -156,6 +154,7 @@ func input(connMaster net.Conn, input chan receive) {
 				temp := &receive{
 					sqlStatement: request.Sql,
 					sqlType:      nonQueryStatement,
+					tableName:    request.TableName,
 					ipAddress:    request.IpAddress,
 				}
 				input <- *temp
@@ -169,6 +168,7 @@ func output(connMaster net.Conn, output chan result) {
 		select {
 		case outPutMsg := <-output:
 			//通信返回结果
+
 			fmt.Println(">>> 返回给 Master: ", outPutMsg)
 			msgStr, _ := json.Marshal(outPutMsg)
 			//fmt.Println("msgStr", msgStr)
@@ -189,4 +189,22 @@ func getTableList() (res []string) {
 	}
 	fmt.Println("当前Table", res)
 	return res
+}
+
+func getTableLog(tableName string) (res []string, err error) {
+	file, err := os.OpenFile("./backup/"+tableName+".txt", os.O_RDONLY, 0644)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	defer file.Close()
+	buf := bufio.NewScanner(file)
+	for {
+		if !buf.Scan() {
+			break
+		}
+		line := buf.Text()
+		res = append(res, line)
+	}
+	return res, nil
 }

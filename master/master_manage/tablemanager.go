@@ -1,16 +1,21 @@
-package main
+package master
 
-import "fmt"
+import (
+	"fmt"
+	"sync"
+)
+
+var lock sync.Mutex
 
 type copyTableInfo struct {
-	tableName string
+	tableName   string
 	aliveRegion string
 }
 
 type tableInfo struct {
-	tableName 			string
-	region_1			string
-	region_2			string
+	tableName string
+	region_1  string
+	region_2  string
 }
 
 type tableList []*tableInfo
@@ -27,7 +32,7 @@ func (tq tableList) Find(tableName string) int {
 	return -1
 }
 
-func (tq tableList) getRegionIp(tableName string) (string, string){
+func (tq tableList) getRegionIp(tableName string) (string, string) {
 	region_1, region_2 := "", ""
 	if index := tq.Find(tableName); index >= 0 {
 		region_1, region_2 = tq[index].region_1, tq[index].region_2
@@ -47,29 +52,29 @@ func (tq tableList) updateRegionIp(tableName, ip string) {
 			tq[index].region_2 = ip
 		}
 	} else {
-		newTable := tableInfo {
+		newTable := tableInfo{
 			tableName: tableName,
-			region_1: ip,
-			region_2: "",
+			region_1:  ip,
+			region_2:  "",
 		}
 		tableQueue = append(tableQueue, &newTable)
 	}
 }
 
-func (tq tableList) downRegionIp(ip string) ([]copyTableInfo){
+func (tq tableList) downRegionIp(ip string) []copyTableInfo {
 	var tableNeedCopy []copyTableInfo
 	for i := 0; i < tq.Len(); i++ {
 		if tq[i].region_1 == ip {
 			tq[i].region_1 = ""
 			info := copyTableInfo{
-				tableName: tq[i].tableName,
+				tableName:   tq[i].tableName,
 				aliveRegion: tq[i].region_2,
 			}
 			tableNeedCopy = append(tableNeedCopy, info)
-		} else if tq[i].region_2 == ip{
+		} else if tq[i].region_2 == ip {
 			tq[i].region_2 = ""
 			info := copyTableInfo{
-				tableName: tq[i].tableName,
+				tableName:   tq[i].tableName,
 				aliveRegion: tq[i].region_1,
 			}
 			tableNeedCopy = append(tableNeedCopy, info)
@@ -78,7 +83,7 @@ func (tq tableList) downRegionIp(ip string) ([]copyTableInfo){
 	return tableNeedCopy
 }
 
-func test_2() {
+func test() {
 	tableQueue.updateRegionIp("hh", "123")
 	tableQueue.updateRegionIp("hh", "123")
 	tableQueue.updateRegionIp("hh", "456")

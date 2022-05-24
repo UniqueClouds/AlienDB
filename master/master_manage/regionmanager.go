@@ -1,4 +1,4 @@
-package main
+package master
 
 import (
 	"container/heap"
@@ -7,11 +7,11 @@ import (
 )
 
 type IpAddressInfo struct {
-	ipAddress   	string // The value of the item; arbitrary.
-	tableNumber 	int    // The priority of the item in the queue.
-	requestQueue 	chan regionRequest
-	receiveQueue    chan regionResult
-	index       	int    // The index of the item in the heap.
+	ipAddress    string // The value of the item; arbitrary.
+	tableNumber  int    // The priority of the item in the queue.
+	requestQueue chan regionRequest
+	receiveQueue chan regionResult
+	index        int // The index of the item in the heap.
 }
 
 type PriorityQueue []*IpAddressInfo
@@ -46,7 +46,7 @@ func (pq *PriorityQueue) Pop() any {
 	return ipAddressInfo
 }
 
-func (pq *PriorityQueue) find(ipAddress string) (int) {
+func (pq *PriorityQueue) find(ipAddress string) int {
 	index := 0
 	for ; index < pq.Len(); index++ {
 		if ipAddress == (*pq)[index].ipAddress {
@@ -65,9 +65,9 @@ func (pq *PriorityQueue) getNextTwo() (string, string) {
 	return firstLast.ipAddress, secondLast.ipAddress
 }
 
-func (pq *PriorityQueue) getCopyRegion(aliveIp string) (string) {
+func (pq *PriorityQueue) getCopyRegion(aliveIp string) string {
 	if (*pq)[0].ipAddress != aliveIp {
-		return (*pq)[0].ipAddress;
+		return (*pq)[0].ipAddress
 	}
 	return (*pq)[1].ipAddress
 }
@@ -106,8 +106,8 @@ func test_1() {
 	heap.Init(&pq)
 
 	sort.Slice(pq, pq.Less)
-	newI := &IpAddressInfo {
-		ipAddress: "hh",
+	newI := &IpAddressInfo{
+		ipAddress:   "hh",
 		tableNumber: 0,
 	}
 
