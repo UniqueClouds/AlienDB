@@ -29,12 +29,12 @@ func Exec(sqlString string, tableName string) ([]map[string]interface{}, error) 
 
 	logInit(tableName)
 	_, err := db.Exec(sqlString) // ignore_security_alert
-	write := bufio.NewWriter(backFile)
-	write.WriteString(sqlString)
-	write.Flush()
 	if err != nil {
 		return nil, err
 	}
+	write := bufio.NewWriter(backFile)
+	write.WriteString(sqlString + "\n")
+	write.Flush()
 
 	return nil, nil
 }
