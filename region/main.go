@@ -4,8 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	_ "github.com/mattn/go-sqlite3"
+	"log"
 	"my/AlienDB/region/sqlite"
 	"net"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 var QuitChan chan string
@@ -38,27 +42,28 @@ const (
 func main() {
 	defer sqlite.Close()
 	fmt.Println(">>> Region 启动中...")
-	//func() {
-	//
-	//	//listener, err := net.ListenTCP("tcp", "localhost:2379")
-	//	var endpoints = []string{"localhost:2223"}
-	//	// 暂定名称
-	//	ser, err := sqlite.NewServiceRegister(endpoints, "/db/region_01", "localhost:8000", 5)
-	//	if err != nil {
-	//		log.Fatalln(err)
-	//	}
-	//	// 监听续租相应 chan
-	//	go ser.ListenLeaseRespChan()
-	//
-	//	// 监听系统信号，等待 ctrl + c 系统信号通知服务关闭
-	//	//c := make(chan os.Signal, 1)
-	//	select {}
-	//}()
+	func() {
+		var endpoints = []string{"localhost:2379"}
+		// 暂定名称
+		ser, err := sqlite.NewServiceRegister(endpoints, "/db/region_01", "localhost:8000", 6, 5)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		// 监听续租相应 chan
+		go ser.ListenLeaseRespChan()
+
+		// 监听系统信号，等待 ctrl + c 系统信号通知服务关闭
+		c := make(chan os.Signal, 1)
+		go func() {
+			signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
+		}()
+		ser.Close()
+	}()
 	//return
 	//var endpoints = []string{"localhost:2222"}
-	StatementChannel := make(chan receive, 500)
-	OutputChannel := make(chan result, 500)
-	QuitChan = make(chan string)
+	//StatementChannel := make(chan receive, 500)
+	//OutputChannel := make(chan result, 500)
+	//QuitChan = make(chan string)
 	//go func() {
 	//	ser, err := sqlite.NewServiceRegister(endpoints, "/db/region_01", "localhost:8000", 6, 5)
 	//	if err != nil {
@@ -67,14 +72,13 @@ func main() {
 	//	}
 	//	go ser.ListenLeaseRespChan()
 	//}()
-	connMaster := sqlite.ConnectToMaster()
-	defer connMaster.Close()
-	go input(connMaster, StatementChannel)
-	go handle(StatementChannel, OutputChannel)
-	go output(connMaster, OutputChannel)
-	for {
-
-	}
+	//connMaster := sqlite.ConnectToMaster()
+	//defer connMaster.Close()
+	//go input(connMaster, StatementChannel)
+	//go handle(StatementChannel, OutputChannel)
+	//go output(connMaster, OutputChannel)
+	//for {
+	//}
 
 }
 
@@ -96,7 +100,7 @@ func handle(input chan receive, output chan result) {
 
 			case nonQueryStatement:
 				fmt.Println("执行语句", rec.sqlStatement)
-				msg, err = sqlite.Exec(rec.sqlStatement)
+				//msg, err = sqlite.Exec(rec.sqlStatement)
 				msg, err = sqlite.Exec(rec.sqlStatement, "tablename")
 			}
 			//fmt.Println("sqlExec", msg, err)

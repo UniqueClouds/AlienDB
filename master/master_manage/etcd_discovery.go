@@ -2,6 +2,7 @@ package master
 
 import (
 	"context"
+	"fmt"
 	"go.etcd.io/etcd/api/v3/mvccpb"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"log"
@@ -55,6 +56,7 @@ func (s *ServiceDiscovery) WatchService() error {
 func (s *ServiceDiscovery) watcher() {
 	prefix := "/db/"
 	rch := s.cli.Watch(context.Background(), prefix, clientv3.WithPrefix())
+	fmt.Printf(">>> etcd: watching prefix:%s now ...", prefix)
 	log.Printf("watching prefix:%s now ...", prefix)
 	for wresp := range rch {
 		for _, ev := range wresp.Events {
@@ -63,6 +65,9 @@ func (s *ServiceDiscovery) watcher() {
 				s.SetServiceList(string(ev.Kv.Key), string(ev.Kv.Value))
 			case mvccpb.DELETE: // 删除
 				s.DelServiceList(string(ev.Kv.Key))
+				{
+
+				}
 			}
 		}
 	}
@@ -73,7 +78,8 @@ func (s *ServiceDiscovery) SetServiceList(key, val string) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	s.serverList[key] = string(val)
-	log.Println("put key :", key, "vak:", val)
+	fmt.Println(">>> etcd: put key :", key, "val", val)
+	log.Println("put key :", key, "val:", val)
 }
 
 //DelServiceList 删除服务地址
@@ -81,6 +87,7 @@ func (s *ServiceDiscovery) DelServiceList(key string) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	delete(s.serverList, key)
+	fmt.Println(">>> etcd: del key", key)
 	log.Println("del key", key)
 }
 
