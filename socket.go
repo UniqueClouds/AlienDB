@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 )
 
 type regionRequest struct {
@@ -27,6 +28,7 @@ type regionResult struct {
 	Message string				   `json:"message"`
 	ClientIP string 			   `json:"clientIp"`
 	File []string				   `json:"file"`
+	TableName string 			   `json:"tableName`
 }
 
 func GetLocalIP() string {
@@ -91,7 +93,7 @@ func sessionWithClient(connClient net.Conn) {
 	fmt.Println("> Master: Client " + connClient.RemoteAddr().String() + " Connected.")
 	newClient := &clientInfo{
 		ipAddress: connClient.RemoteAddr().String(),
-		resultQueue: make(chan clientResult, 20),
+		resultQueue: make(chan middleResult, 20),
 	}
 	clientQueue = append(clientQueue, newClient)
 	defer connClient.Close()
@@ -113,9 +115,21 @@ func handleClientRequest(connClient net.Conn) {
 			json.Unmarshal(data, &request)
 			if request["error"] == "" {
 				if request["join"] == "true" {
-					
+					names := strings.Split(request["name"], " ")
+					sameIP := tableQueue.getSameIP(names[0], names[1])
+					handleJoin(connClient.RemoteAddr().String(), sameIP, request["sql"])
 				} else if request["kind"] == "create" {
 					handleCreate(connClient.RemoteAddr().String(), request["name"], request["sql"])
+				} else if index := tableQueue.Find(request["name"]); index == -1 {
+					newResult := clientResult {
+						Error: "No such table " + request["name"] + ".",
+						Data: nil,
+					}
+					result := middleResult{
+						result: newResult,
+						times: 1,
+					}
+					clientQueue[clientQueue.Find(connClient.RemoteAddr().String())].resultQueue <- result
 				} else {
 					handleOther(connClient.RemoteAddr().String(), request["name"], request["kind"], request["sql"])
 				}
@@ -129,15 +143,23 @@ func handleClientRequest(connClient net.Conn) {
 func sendClientResult(connClient net.Conn) {
 	for {
 		if id := clientQueue.Find(connClient.RemoteAddr().String()); id >= 0 {
+			flag := 0
 			var msg clientResult
 			for i := 0; i < 2; i++ {
 				select {
 					case sendRlt := <-clientQueue[id].resultQueue :
 						if i == 0 {
-							msg = sendRlt
-						} else if sendRlt.Error == "" {
-							msg = sendRlt
+							msg = sendRlt.result
+							if sendRlt.times == 1 {
+								flag = 1
+								break
+							}
+						} else if sendRlt.result.Error == "" {
+							msg = sendRlt.result
 						}
+				}
+				if (flag == 1){
+					break
 				}
 			}
 			fmt.Printf("> Master: Send to client(%s) [%s].\n", connClient.RemoteAddr().String(), msg.Data)
@@ -154,6 +176,7 @@ func sessionWithRegion(connRegion net.Conn) {
 	newRegion := &IpAddressInfo{
 		ipAddress: connRegion.RemoteAddr().String(),
 		requestQueue:	make(chan regionRequest, 20),
+		copyRequestQueue:    make(chan string, 20),
 		tableNumber: 0,
 	}
 	regionQueue.Push(newRegion)
@@ -184,7 +207,7 @@ func sendRegionRequest(connRegion net.Conn) {
 
 func handleRegionReceive(connRegion net.Conn) {
 	for {
-		msg := make([]byte, 255)
+		msg := make([]byte, 1024 * 10)
 		msgRead, err := connRegion.Read(msg)
 		data := make([]byte, msgRead)
 		copy(data, msg)
@@ -197,6 +220,7 @@ func handleRegionReceive(connRegion net.Conn) {
 				Message: "",
 				ClientIP: "",
 				File: nil,
+				TableName: "",
 			}
 			json.Unmarshal(data, &rec)
 			regionQueue.update(connRegion.RemoteAddr().String(), len(rec.TableList))
@@ -207,6 +231,11 @@ func handleRegionReceive(connRegion net.Conn) {
 				fmt.Printf("> Master: Receive data from region(%s): %s\n", connRegion.RemoteAddr().String(), rec.Message)
 				if rec.Message == "copy" {
 					forwardCopy(rec, connRegion)
+				} else if rec.Message == "copy ok" {
+					fmt.Println("> Master: Copy table successfully !")
+				} else if rec.Message == "drop ok" {
+					tableQueue.downTableIp(rec.TableName, connRegion.RemoteAddr().String())
+					handleResult(rec)
 				} else {
 					handleResult(rec)
 				}
@@ -218,10 +247,10 @@ func handleRegionReceive(connRegion net.Conn) {
 }
 
 func copyRequest(conn net.Conn) {
-	id := regionQueue.find(conn.RemoteAddr().String())
 	for {
 			select {
-				case tableName := <-regionQueue[id].copyRequestQueue  :
+				case tableName := <-regionQueue[regionQueue.find(conn.RemoteAddr().String())].copyRequestQueue  :
+					fmt.Printf("> Master: Copy Table [%s].\n", tableName)
 					request := regionRequest{
 						TableName: tableName,
 						IpAddress: "",
@@ -229,7 +258,7 @@ func copyRequest(conn net.Conn) {
 						Sql: "",
 						File: nil,
 					}
-					fmt.Printf("> Master: Send to client(%s) [copy %s].\n", conn.RemoteAddr().String(), request.TableName)
+					fmt.Printf("> Master: Send to region(%s) [copy %s].\n", conn.RemoteAddr().String(), request.TableName)
 					msgStr, _ := json.Marshal(request)
 					if _, err := conn.Write(msgStr); err != nil {
 						panic(err)
@@ -243,7 +272,7 @@ func forwardCopy(rec regionResult, conn net.Conn) {
 	request := regionRequest {
 		TableName: "",
 		IpAddress: "",
-		Kind: "copy",
+		Kind: "new",
 		Sql: "",
 		File: rec.File,
 	}

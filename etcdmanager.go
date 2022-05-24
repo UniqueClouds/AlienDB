@@ -70,7 +70,10 @@ func (s *ServiceDiscovery) watcher() {
 					regionQueue = removeRegion(regionQueue, ip)
 					fmt.Printf("> Master: Tere are now %d region connections.\n", regionQueue.Len())
 					s.DelServiceList(string(ev.Kv.Key))
-					copyInfoChannel <- tableQueue.downRegionIp(ip)
+					copyList := tableQueue.downRegionIp(ip)
+					for _, copyTable := range copyList {
+						regionQueue[regionQueue.find(copyTable.aliveRegion)].copyRequestQueue <- copyTable.tableName
+					}
 			}
 		}
 	}
