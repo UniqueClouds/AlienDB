@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math/rand"
 	"time"
 
 	clientv3 "go.etcd.io/etcd/client/v3"
@@ -90,12 +91,25 @@ func (s *ServiceRegister) Close() error {
 	return s.cli.Close()
 }
 
+const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+func RandStringBytes(n int) string {
+	rand.Seed(time.Now().UnixNano())
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letterBytes[rand.Intn(len(letterBytes))]
+	}
+	return string(b)
+}
+
 // RegionRegister 从节点服务注册功能
 func RegionRegister(localAddr string) {
-	var endpoints = []string{"localhost:2379", "172.20.10.3:2379"}
+	var endpoints = []string{"192.168.43.214:2379"}
+	//var endpoints = []string{"localhost:2379"}
 	//localIP := GetLocalIP()
 	// 暂定名称
-	ser, err := NewServiceRegister(endpoints, "/db/region_01", localAddr, 6, 5)
+
+	ser, err := NewServiceRegister(endpoints, "/db/region"+RandStringBytes(4), localAddr, 6, 5)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -105,11 +119,4 @@ func RegionRegister(localAddr string) {
 	for {
 
 	}
-	//// 监听系统信号，等待 ctrl + c 系统信号通知服务关闭
-	//c := make(chan os.Signal, 1)
-	//go func() {
-	//	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
-	//}()
-	////log.Print("exit %v", <-c)
-	//ser.Close()
 }

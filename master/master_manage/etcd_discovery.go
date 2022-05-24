@@ -2,7 +2,6 @@ package master
 
 import (
 	"context"
-	"fmt"
 	"go.etcd.io/etcd/api/v3/mvccpb"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"log"
@@ -65,7 +64,8 @@ func (s *ServiceDiscovery) watcher() {
 			case mvccpb.PUT: // 修改或者新增
 				s.SetServiceList(string(ev.Kv.Key), string(ev.Kv.Value))
 			case mvccpb.DELETE: // 删除
-				ip := string(ev.Kv.Value)
+				ip := s.serverList[string(ev.Kv.Key)]
+				log.Println("Region lost, delete ip: ", ip)
 				s.DelServiceList(string(ev.Kv.Key))
 				copyInfoChannel <- tableQueue.downRegionIp(ip)
 			}
@@ -78,7 +78,7 @@ func (s *ServiceDiscovery) SetServiceList(key, val string) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	s.serverList[key] = string(val)
-	fmt.Println(">>> etcd: put key :", key, "val", val)
+	//fmt.Println(">>> etcd: put key :", key, "val", val)
 	log.Println("put key :", key, "val:", val)
 }
 
@@ -87,7 +87,7 @@ func (s *ServiceDiscovery) DelServiceList(key string) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	delete(s.serverList, key)
-	fmt.Println(">>> etcd: del key", key)
+	//fmt.Println(">>> etcd: del key", key)
 	log.Println("del key", key)
 }
 
