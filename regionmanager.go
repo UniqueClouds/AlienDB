@@ -3,6 +3,7 @@ package main
 import (
 	"container/heap"
 	"fmt"
+	"sort"
 )
 
 type IpAddressInfo struct {
@@ -18,7 +19,7 @@ type PriorityQueue []*IpAddressInfo
 func (pq PriorityQueue) Len() int { return len(pq) }
 
 func (pq PriorityQueue) Less(i, j int) bool {
-	return pq[i].tableNumber > pq[j].tableNumber
+	return pq[i].tableNumber < pq[j].tableNumber
 }
 
 func (pq PriorityQueue) Swap(i, j int) {
@@ -32,6 +33,7 @@ func (pq *PriorityQueue) Push(x any) {
 	ipAddressInfo := x.(*IpAddressInfo)
 	ipAddressInfo.index = n
 	*pq = append(*pq, ipAddressInfo)
+	sort.Slice(*pq, pq.Less)
 }
 
 func (pq *PriorityQueue) Pop() any {
@@ -63,23 +65,30 @@ func (pq *PriorityQueue) getNextTwo() (string, string) {
 	return firstLast.ipAddress, secondLast.ipAddress
 }
 
-func (pq *PriorityQueue) remove(ipAddress string) {
+func (pq *PriorityQueue) getCopyRegion(aliveIp string) (string) {
+	if (*pq)[0].ipAddress != aliveIp {
+		return (*pq)[0].ipAddress;
+	}
+	return (*pq)[1].ipAddress
+}
+
+func removeRegion(pq PriorityQueue, ipAddress string) PriorityQueue {
 	index := 0
 	for ; index < pq.Len(); index++ {
-		if ipAddress == (*pq)[index].ipAddress {
+		if ipAddress == pq[index].ipAddress {
 			break
 		}
 	}
-	heap.Remove(pq, index)
+	return append(pq[:index], pq[index+1:]...)
 }
 
-func (pq *PriorityQueue) update(ipAddressInfo *IpAddressInfo, ipAddress string, tableNumber int) {
-	ipAddressInfo.ipAddress = ipAddress
+func (pq *PriorityQueue) update(ipAddress string, tableNumber int) {
+	ipAddressInfo := (*pq)[pq.find(ipAddress)]
 	ipAddressInfo.tableNumber = tableNumber
-	heap.Fix(pq, ipAddressInfo.index)
+	sort.Slice(*pq, pq.Less)
 }
 
-func test() {
+func test_1() {
 	ipAddressInfos := map[string]int{
 		"banana": 3, "apple": 2, "pear": 4,
 	}
@@ -96,21 +105,20 @@ func test() {
 	}
 	heap.Init(&pq)
 
-	item := &IpAddressInfo{
-		ipAddress:   "orange",
-		tableNumber: 1,
+	sort.Slice(pq, pq.Less)
+	newI := &IpAddressInfo {
+		ipAddress: "hh",
+		tableNumber: 0,
 	}
-	heap.Push(&pq, item)
-	pq.update(item, item.ipAddress, 5)
 
-	first, second := pq.getNextTwo()
-	fmt.Printf("%s, %s ", first, second)
-
-	first, second = pq.getNextTwo()
-	fmt.Printf("%s, %s ", first, second)
-
-	for pq.Len() > 0 {
-		item := heap.Pop(&pq).(*IpAddressInfo)
-		fmt.Printf("%s:%d ", item.ipAddress, item.tableNumber)
+	pq.Push(newI)
+	pq.update("hh", 9)
+	pq = removeRegion(pq, "apple")
+	pq = removeRegion(pq, "banana")
+	for i := 0; i < pq.Len(); i++ {
+		fmt.Printf("%s:%d ", pq[i].ipAddress, pq[i].tableNumber)
 	}
+
+	fmt.Println(pq.getCopyRegion("hh"))
+	fmt.Println(pq.getCopyRegion("pear"))
 }

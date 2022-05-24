@@ -1,5 +1,12 @@
 package main
 
+import "fmt"
+
+type copyTableInfo struct {
+	tableName string
+	aliveRegion string
+}
+
 type tableInfo struct {
 	tableName 			string
 	region_1			string
@@ -47,4 +54,39 @@ func (tq tableList) updateRegionIp(tableName, ip string) {
 		}
 		tableQueue = append(tableQueue, &newTable)
 	}
+}
+
+func (tq tableList) downRegionIp(ip string) ([]copyTableInfo){
+	var tableNeedCopy []copyTableInfo
+	for i := 0; i < tq.Len(); i++ {
+		if tq[i].region_1 == ip {
+			tq[i].region_1 = ""
+			info := copyTableInfo{
+				tableName: tq[i].tableName,
+				aliveRegion: tq[i].region_2,
+			}
+			tableNeedCopy = append(tableNeedCopy, info)
+		} else if tq[i].region_2 == ip{
+			tq[i].region_2 = ""
+			info := copyTableInfo{
+				tableName: tq[i].tableName,
+				aliveRegion: tq[i].region_1,
+			}
+			tableNeedCopy = append(tableNeedCopy, info)
+		}
+	}
+	return tableNeedCopy
+}
+
+func test_2() {
+	tableQueue.updateRegionIp("hh", "123")
+	tableQueue.updateRegionIp("hh", "123")
+	tableQueue.updateRegionIp("hh", "456")
+
+	tableQueue.updateRegionIp("haha", "789")
+
+	table := tableQueue.downRegionIp("123")
+
+	fmt.Println(tableQueue[0].region_1, tableQueue[0].region_2)
+	fmt.Println(table[0].aliveRegion, table[0].tableName)
 }

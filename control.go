@@ -7,6 +7,7 @@ var regionQueue PriorityQueue
 func handleCreate(ipAddress, tableName, sqlInstruction string) {
 	desRegion_1, desRegion_2 := regionQueue.getNextTwo()
 	request := regionRequest {
+		TableName: tableName,
 		IpAddress: ipAddress,
 		Kind: "create",
 		Sql: sqlInstruction,
@@ -18,6 +19,7 @@ func handleCreate(ipAddress, tableName, sqlInstruction string) {
 func handleOther(ipAddress, tableName, kind, sqlInstruction string) {
 	desRegion_1, desRegion_2 := tableQueue.getRegionIp(tableName)
 	request := regionRequest {
+		TableName: tableName,
 		IpAddress: ipAddress,
 		Kind: kind,
 		Sql: sqlInstruction,

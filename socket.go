@@ -8,6 +8,7 @@ import (
 )
 
 type regionRequest struct {
+	TableName string
 	IpAddress string
 	Kind string
 	Sql string
@@ -184,7 +185,7 @@ func handleRegionReceive(connRegion net.Conn) {
 				ClientIP: "",
 			}
 			json.Unmarshal(data, &rec)
-			regionQueue[regionQueue.find(connRegion.RemoteAddr().String())].tableNumber = len(rec.TableList)
+			regionQueue.update(connRegion.RemoteAddr().String(), len(rec.TableList))
 			for _, tn := range rec.TableList {
 				tableQueue.updateRegionIp(tn, connRegion.RemoteAddr().String())
 			}
