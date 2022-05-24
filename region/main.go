@@ -52,8 +52,7 @@ func main() {
 	QuitChan = make(chan string)
 	fmt.Println(">>> Region 启动中...")
 	connMaster := sqlite.ConnectToMaster()
-	//go sqlite.RegionRegister()
-
+	sqlite.Exec("delete from sqlite_master where type in ('table', 'index', 'trigger');", "deleteAll")
 	go sqlite.RegionRegister(connMaster.LocalAddr().String())
 	fmt.Println(connMaster.LocalAddr())
 	defer connMaster.Close()
@@ -75,7 +74,8 @@ func handle(input chan receive, output chan result) {
 				msg []map[string]interface{}
 				err error
 			)
-
+			res.Message = "ok"
+			res.Error = ""
 			switch rec.sqlType {
 			case copyStatement:
 				res.Message = "copy"
@@ -85,14 +85,12 @@ func handle(input chan receive, output chan result) {
 			case queryStatement:
 				fmt.Println("查询语句", rec.sqlStatement)
 				msg, err = sqlite.Query(rec.sqlStatement)
-
 			case nonQueryStatement:
 				fmt.Println("执行语句", rec.sqlStatement)
 				//msg, err = sqlite.Exec(rec.sqlStatement)
 				msg, err = sqlite.Exec(rec.sqlStatement, rec.tableName)
 			}
 			//fmt.Println("sqlExec", msg, err)
-			res.Error = ""
 			if err != nil {
 				fmt.Println(">>> 出现错误!", err)
 				res.Error = err.Error()
@@ -103,11 +101,8 @@ func handle(input chan receive, output chan result) {
 			res.ClientIP = rec.ipAddress
 			fmt.Println(">>> res.ClientIP", res.ClientIP)
 			fmt.Println(">>> 得到结果: ", res)
-			if err != nil {
-				QuitChan <- "err"
-			} else {
-				output <- res
-			}
+			// 返回结果给 master
+			output <- res
 		}
 	}
 }
@@ -133,7 +128,7 @@ func input(connMaster net.Conn, input chan receive) {
 			json.Unmarshal(data, &request)
 			fmt.Println(">>> request.IpAddress", request.IpAddress)
 			fmt.Println(">>> 收到请求: ", request.IpAddress, request.Kind, request.Sql)
-			fmt.Println("killall")
+			//fmt.Println("killall")
 			if request.Kind == "copy" {
 				temp := &receive{
 					sqlStatement: "",
@@ -174,7 +169,7 @@ func output(connMaster net.Conn, output chan result) {
 			//fmt.Println("msgStr", msgStr)
 			_, err := connMaster.Write(msgStr)
 			if err != nil {
-				panic(err)
+				log.Println(err)
 			}
 		}
 	}
