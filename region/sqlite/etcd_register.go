@@ -3,12 +3,13 @@ package sqlite
 import (
 	"context"
 	"fmt"
-	clientv3 "go.etcd.io/etcd/client/v3"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
 // reference: https://www.cnblogs.com/FireworksEasyCool/p/12890649.html
@@ -107,6 +108,6 @@ func test() {
 	go func() {
 		signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
 	}()
-	log.Print("exit %s", <-c)
+	//log.Print("exit %v", <-c)
 	ser.Close()
 }

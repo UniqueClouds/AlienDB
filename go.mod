@@ -6,6 +6,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.13
 	go.etcd.io/etcd/api/v3 v3.5.4
 	go.etcd.io/etcd/client/v3 v3.5.4
+	go.uber.org/zap v1.21.0
 	golang.org/x/sys v0.0.0-20211117180635-dee7805ff2e1 // indirect
 )
 
@@ -17,7 +18,6 @@ require (
 	go.etcd.io/etcd/client/pkg/v3 v3.5.4 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
-	go.uber.org/zap v1.17.0 // indirect
 	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4 // indirect
 	golang.org/x/text v0.3.5 // indirect
 	google.golang.org/genproto v0.0.0-20210602131652-f16073e35f0c // indirect

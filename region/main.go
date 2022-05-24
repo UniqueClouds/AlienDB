@@ -32,6 +32,7 @@ type result struct {
 const (
 	queryStatement    = 1
 	nonQueryStatement = 2
+	quitStatement     = 3
 )
 
 func main() {
@@ -96,6 +97,7 @@ func handle(input chan receive, output chan result) {
 			case nonQueryStatement:
 				fmt.Println("执行语句", rec.sqlStatement)
 				msg, err = sqlite.Exec(rec.sqlStatement)
+				msg, err = sqlite.Exec(rec.sqlStatement, "tablename")
 			}
 			//fmt.Println("sqlExec", msg, err)
 			res.Error = ""
@@ -122,7 +124,7 @@ func handle(input chan receive, output chan result) {
 func input(connMaster net.Conn, input chan receive) {
 	//通信得到结果
 	for {
-		msg := make([]byte, 1000)
+		msg := make([]byte, 255)
 		msgRead, err := connMaster.Read(msg)
 		fmt.Println(">>> msgRead: ", msgRead)
 		data := make([]byte, msgRead)
