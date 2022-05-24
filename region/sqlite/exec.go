@@ -14,8 +14,8 @@ var backFile *os.File
 func logInit(s string, t int) {
 	var err error
 	os.MkdirAll("./backup", 0755)
-	if t == 1 {
-		backFile, err = os.OpenFile("./backup/"+s+".txt", os.O_CREATE|os.O_WRONLY, 0644)
+	if t == 0 {
+		backFile, err = os.OpenFile("./backup/"+s+".txt", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	} else {
 		backFile, err = os.OpenFile("./backup/"+s+".txt", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	}

@@ -80,6 +80,7 @@ func handle(input chan receive, output chan result) {
 			switch rec.sqlType {
 			case newStatement:
 				fmt.Println("> Region: 还原表: ", rec.tableName)
+				fmt.Println("> Region: file []string: ", rec.file)
 				for _, query := range rec.file {
 					fmt.Println("> Region: 执行语句: ", query)
 					msg, err = sqlite.Exec(query, rec.tableName)
@@ -134,11 +135,10 @@ func input(connMaster net.Conn, input chan receive) {
 				IpAddress: "",
 				Kind:      "",
 				Sql:       "",
-				File:      make([]string, 0),
+				File:      nil,
 			}
 			json.Unmarshal(data, &request)
-			fmt.Println("> Region: request.IpAddress", request.IpAddress)
-			fmt.Println("> Region: 收到请求: ", request.IpAddress, request.Kind, request.Sql)
+			fmt.Println("> Region: 收到请求: ", "ipaddress", request.IpAddress, "kind", request.Kind, "sql", request.Sql, "tableName", request.TableName, "file", request.File)
 
 			if request.Kind == "new" {
 				temp := &receive{
@@ -146,6 +146,7 @@ func input(connMaster net.Conn, input chan receive) {
 					sqlType:      newStatement,
 					tableName:    request.TableName,
 					ipAddress:    request.IpAddress,
+					file:         request.File,
 				}
 				input <- *temp
 			} else if request.Kind == "copy" {
