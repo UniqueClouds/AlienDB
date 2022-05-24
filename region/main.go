@@ -128,7 +128,7 @@ func handle(input chan receive, output chan result) {
 func input(connMaster net.Conn, input chan receive) {
 	//通信得到结果
 	for {
-		msg := make([]byte, 255)
+		msg := make([]byte, 1024*10)
 		msgRead, err := connMaster.Read(msg)
 		fmt.Println("> Region:  msgRead: ", msgRead)
 		data := make([]byte, msgRead)
