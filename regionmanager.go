@@ -75,11 +75,10 @@ func (pq *PriorityQueue) getCopyRegion(aliveIp string) (string) {
 }
 
 func removeRegion(pq PriorityQueue, ipAddress string) PriorityQueue {
-	index := 0
-	for ; index < pq.Len(); index++ {
-		if ipAddress == pq[index].ipAddress {
-			break
-		}
+	index := pq.find(ipAddress)
+	if index == -1 {
+		fmt.Printf("> Master: There is no region(%s).\n", ipAddress)
+		return pq
 	}
 	return append(pq[:index], pq[index+1:]...)
 }

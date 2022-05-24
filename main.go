@@ -8,7 +8,7 @@ import (
 var lock sync.Mutex
 
 func main() {
-	fmt.Println(GetLocalIP())
+	fmt.Println("The ip address of Master-Server:", GetLocalIP())
 	go RunServiceDiscovery()
 	go ListenClient()
 	go ListenRegion()

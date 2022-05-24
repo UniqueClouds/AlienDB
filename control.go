@@ -11,6 +11,7 @@ func handleCreate(ipAddress, tableName, sqlInstruction string) {
 		IpAddress: ipAddress,
 		Kind: "create",
 		Sql: sqlInstruction,
+		File: nil,
 	}
 	regionQueue[regionQueue.find(desRegion_1)].requestQueue <- request
 	regionQueue[regionQueue.find(desRegion_2)].requestQueue <- request
@@ -23,6 +24,7 @@ func handleOther(ipAddress, tableName, kind, sqlInstruction string) {
 		IpAddress: ipAddress,
 		Kind: kind,
 		Sql: sqlInstruction,
+		File: nil,
 	}
 	if desRegion_1 != "" && desRegion_2 != "" {
 		regionQueue[regionQueue.find(desRegion_1)].requestQueue <- request
@@ -40,4 +42,12 @@ func handleResult(result regionResult){
 		Data: result.Data,
 	}
 	clientQueue[clientQueue.Find(result.ClientIP)].resultQueue <- newResult
+}
+
+func handleError(result_e regionResult){
+	newResult := clientResult {
+		Error: result_e.Error,
+		Data: result_e.Data,
+	}
+	clientQueue[clientQueue.Find(result_e.ClientIP)].resultQueue <- newResult
 }

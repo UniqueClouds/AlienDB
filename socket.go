@@ -12,6 +12,7 @@ type regionRequest struct {
 	IpAddress string
 	Kind string
 	Sql string
+	File []string
 }
 
 type clientResult struct {
@@ -25,9 +26,9 @@ type regionResult struct {
 	TableList []string 			   `json:"tableList"`
 	Message string				   `json:"message"`
 	ClientIP string 			   `json:"clientIp"`
+	File []string				   `json:"file"`
 }
 
-// GetLocalIP 获取本机ip地址，方便客户端及从节点的连接
 func GetLocalIP() string {
 	host, _ := os.Hostname()
 	addrs, _ := net.LookupIP(host)
@@ -90,7 +91,7 @@ func sessionWithClient(connClient net.Conn) {
 	fmt.Println("> Master: Client " + connClient.RemoteAddr().String() + " Connected.")
 	newClient := &clientInfo{
 		ipAddress: connClient.RemoteAddr().String(),
-		resultQueue:	make(chan clientResult, 20),
+		resultQueue: make(chan clientResult, 20),
 	}
 	clientQueue = append(clientQueue, newClient)
 	defer connClient.Close()
@@ -106,7 +107,7 @@ func handleClientRequest(connClient net.Conn) {
 		data := make([]byte, msgRead)
 		copy(data, msg)
 		if msgRead == 0 || err != nil {
-			panic(err)
+			// panic(err)
 		} else {
 			request := make(map[string]string)
 			json.Unmarshal(data, &request)
@@ -128,13 +129,21 @@ func handleClientRequest(connClient net.Conn) {
 func sendClientResult(connClient net.Conn) {
 	for {
 		if id := clientQueue.Find(connClient.RemoteAddr().String()); id >= 0 {
-			select {
-				case sendRlt := <-clientQueue[id].resultQueue :
-					fmt.Printf("> Master: Send to client(%s) [%s].\n", connClient.RemoteAddr().String(), sendRlt.Data)
-					msgStr, _ := json.Marshal(sendRlt)
-					if _, err := connClient.Write(msgStr); err != nil {
-						panic(err)
+			var msg clientResult
+			for i := 0; i < 2; i++ {
+				select {
+					case sendRlt := <-clientQueue[id].resultQueue :
+						if i == 0 {
+							msg = sendRlt
+						} else if sendRlt.Error == "" {
+							msg = sendRlt
+						}
 				}
+			}
+			fmt.Printf("> Master: Send to client(%s) [%s].\n", connClient.RemoteAddr().String(), msg.Data)
+			msgStr, _ := json.Marshal(msg)
+			if _, err := connClient.Write(msgStr); err != nil {
+				panic(err)
 			}
 		}
 	}
@@ -153,8 +162,7 @@ func sessionWithRegion(connRegion net.Conn) {
 	go sendRegionRequest(connRegion)
 	go handleRegionReceive(connRegion)
 
-	go getCopyInfo(connRegion)
-	go sendCopyInfo(connRegion)
+	go copyRequest(connRegion)
 
 	select {}
 }
@@ -181,13 +189,14 @@ func handleRegionReceive(connRegion net.Conn) {
 		data := make([]byte, msgRead)
 		copy(data, msg)
 		if msgRead == 0 || err != nil {
-			panic(err)
+			// panic(err)
 		} else {
 			rec := regionResult{
 				Error: "",
 				Data:  nil,
 				Message: "",
 				ClientIP: "",
+				File: nil,
 			}
 			json.Unmarshal(data, &rec)
 			regionQueue.update(connRegion.RemoteAddr().String(), len(rec.TableList))
@@ -196,24 +205,29 @@ func handleRegionReceive(connRegion net.Conn) {
 			}
 			if rec.Error == "" {
 				fmt.Printf("> Master: Receive data from region(%s): %s\n", connRegion.RemoteAddr().String(), rec.Message)
-				handleResult(rec)
+				if rec.Message == "copy" {
+					forwardCopy(rec, connRegion)
+				} else {
+					handleResult(rec)
+				}
 			} else {
-				fmt.Println("Error: ", rec.Error)
+				handleError(rec)
 			}
 		}
 	}
 }
 
-func getCopyInfo(conn net.Conn) {
+func copyRequest(conn net.Conn) {
 	id := regionQueue.find(conn.RemoteAddr().String())
 	for {
 			select {
-				case tableName := <-regionQueue[id].copyRequestQueue :
+				case tableName := <-regionQueue[id].copyRequestQueue  :
 					request := regionRequest{
 						TableName: tableName,
 						IpAddress: "",
 						Kind: "copy",
 						Sql: "",
+						File: nil,
 					}
 					fmt.Printf("> Master: Send to client(%s) [copy %s].\n", conn.RemoteAddr().String(), request.TableName)
 					msgStr, _ := json.Marshal(request)
@@ -224,6 +238,14 @@ func getCopyInfo(conn net.Conn) {
 		}
 }
 
-func sendCopyInfo(conn net.Conn) {
-	// desRegion := regionQueue.getCopyRegion()
+func forwardCopy(rec regionResult, conn net.Conn) {
+	desRegion := regionQueue.getCopyRegion(conn.RemoteAddr().String())
+	request := regionRequest {
+		TableName: "",
+		IpAddress: "",
+		Kind: "copy",
+		Sql: "",
+		File: rec.File,
+	}
+	regionQueue[regionQueue.find(desRegion)].requestQueue <- request
 }
