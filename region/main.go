@@ -35,6 +35,7 @@ type result struct {
 	Message   string                   `json:"message"`
 	ClientIP  string                   `json:"clientIP"`
 	File      []string                 `json:"file"`
+	TableName string                   `json:"tableName"`
 }
 
 const (
@@ -91,7 +92,7 @@ func handle(input chan receive, output chan result) {
 				res.Message = "copy ok"
 			case copyStatement:
 				res.Message = "copy"
-				fmt.Println("> Region: 复制表:", rec.tableName)
+				fmt.Println("> Region: 复制表: ", rec.tableName)
 				// 复制表
 				res.File, err = getTableLog(rec.tableName)
 			case queryStatement:
@@ -111,6 +112,7 @@ func handle(input chan receive, output chan result) {
 			res.Data = msg
 			res.TableList = getTableList()
 			res.ClientIP = rec.ipAddress
+			res.TableName = rec.tableName
 			fmt.Println("> Region:  res.ClientIP", res.ClientIP)
 			fmt.Println("> Region:  得到结果: ", res)
 			// 返回结果给 master
