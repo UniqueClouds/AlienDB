@@ -149,8 +149,13 @@ func sessionWithRegion(connRegion net.Conn) {
 	}
 	regionQueue.Push(newRegion)
 	fmt.Printf("> Master: There are now %d region connections.\n", regionQueue.Len())
+
 	go sendRegionRequest(connRegion)
 	go handleRegionReceive(connRegion)
+
+	go getCopyInfo(connRegion)
+	go sendCopyInfo(connRegion)
+
 	select {}
 }
 
@@ -197,4 +202,28 @@ func handleRegionReceive(connRegion net.Conn) {
 			}
 		}
 	}
+}
+
+func getCopyInfo(conn net.Conn) {
+	id := regionQueue.find(conn.RemoteAddr().String())
+	for {
+			select {
+				case tableName := <-regionQueue[id].copyRequestQueue :
+					request := regionRequest{
+						TableName: tableName,
+						IpAddress: "",
+						Kind: "copy",
+						Sql: "",
+					}
+					fmt.Printf("> Master: Send to client(%s) [copy %s].\n", conn.RemoteAddr().String(), request.TableName)
+					msgStr, _ := json.Marshal(request)
+					if _, err := conn.Write(msgStr); err != nil {
+						panic(err)
+				}
+			}
+		}
+}
+
+func sendCopyInfo(conn net.Conn) {
+	// desRegion := regionQueue.getCopyRegion()
 }

@@ -11,6 +11,8 @@ type IpAddressInfo struct {
 	tableNumber 	int    // The priority of the item in the queue.
 	requestQueue 	chan regionRequest
 	receiveQueue    chan regionResult
+	copyRequestQueue    chan string
+	copyInfoQueue		chan string
 	index       	int    // The index of the item in the heap.
 }
 
