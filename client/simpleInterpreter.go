@@ -12,8 +12,7 @@ func Interpreter(sql string) map[string]string {
 	if words[0] == "create" || words[0] == "copy" {
 		result["name"] = words[2]
 	} else if words[0] == "update" || words[0] == "drop" || words[0] == "insert" || words[0] == "delete" {
-		name := strings.Trim(words[2], "();")
-		result["name"] = name
+		result["name"] = words[2]
 	} else if words[0] == "select" {
 		var i int
 		for i = 0; i < len(words); i++ {
@@ -25,9 +24,7 @@ func Interpreter(sql string) map[string]string {
 			}
 		}
 	}
-	if len(result["name"]) > 0 && result["name"][len(result["name"])-1] == ';' {
-		result["name"] = string([]byte(result["name"])[:len(result["name"])-1])
-	}
+	result["name"] = strings.Trim(result["name"], "();\n")
 	result["sql"] = sql
 	if _, ok := result["name"]; !ok {
 		result["error"] = "true"
