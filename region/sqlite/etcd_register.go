@@ -24,7 +24,7 @@ type ServiceRegister struct {
 
 // NewServiceRegister 创建租约注册服务
 func NewServiceRegister(endpoints []string, key, val string, lease int64, dialTimeout int) (*ServiceRegister, error) {
-	fmt.Println(">>> Region 向主节点注册服务中 ....")
+	fmt.Println(">Region: 向主节点注册服务中 ....")
 	cli, err := clientv3.New(clientv3.Config{
 		Endpoints:   endpoints,
 		DialTimeout: time.Duration(dialTimeout) * time.Second,
@@ -77,7 +77,7 @@ func (s *ServiceRegister) putKeyWithLease(lease int64) error {
 // ListenLeaseRespChan 监听 续租情况
 func (s *ServiceRegister) ListenLeaseRespChan() {
 	for leaseKeepResp := range s.keepAlveChan {
-		log.Println("续约成功", leaseKeepResp)
+		log.Println(">Region: 续约成功", leaseKeepResp)
 	}
 	log.Println("关闭续租")
 }
@@ -104,7 +104,7 @@ func RandStringBytes(n int) string {
 
 // RegionRegister 从节点服务注册功能
 func RegionRegister(localAddr string) {
-	var endpoints = []string{"192.168.43.214:2379"}
+	var endpoints = []string{"192.168.81.166:2379"}
 	//var endpoints = []string{"localhost:2379"}
 	//localIP := GetLocalIP()
 	// 暂定名称

@@ -51,9 +51,9 @@ func main() {
 	StatementChannel := make(chan receive, 500)
 	OutputChannel := make(chan result, 500)
 	QuitChan = make(chan string)
-	fmt.Println(">>> Region 启动中...")
+	fmt.Println(">Region: 启动中...")
 	connMaster := sqlite.ConnectToMaster()
-	sqlite.Exec("delete from sqlite_master where type in ('table', 'index', 'trigger');", "deleteAll")
+	//sqlite.Exec("delete from sqlite_master where type in ('table', 'index', 'trigger');", "deleteAll")
 	go sqlite.RegionRegister(connMaster.LocalAddr().String())
 	fmt.Println(connMaster.LocalAddr())
 	defer connMaster.Close()
@@ -69,7 +69,7 @@ func handle(input chan receive, output chan result) {
 	for {
 		select {
 		case rec := <-input:
-			fmt.Println("rec", rec)
+			fmt.Println("> Region: rec", rec)
 			var (
 				res result
 				msg []map[string]interface{}
@@ -79,36 +79,39 @@ func handle(input chan receive, output chan result) {
 			res.Error = ""
 			switch rec.sqlType {
 			case newStatement:
+				fmt.Println("> Region: 还原表: ", rec.tableName)
 				for _, query := range rec.file {
+					fmt.Println("> Region: 执行语句: ", query)
 					msg, err = sqlite.Exec(query, rec.tableName)
 					if err != nil {
-						break
+						fmt.Println("err", err)
 					}
 				}
+				res.Message = "copy ok"
 			case copyStatement:
 				res.Message = "copy"
-				fmt.Println("复制表:", rec.tableName)
+				fmt.Println("> Region: 复制表:", rec.tableName)
 				// 复制表
 				res.File, err = getTableLog(rec.tableName)
 			case queryStatement:
-				fmt.Println("查询语句", rec.sqlStatement)
+				fmt.Println("> Region: 查询语句", rec.sqlStatement)
 				msg, err = sqlite.Query(rec.sqlStatement)
 			case nonQueryStatement:
-				fmt.Println("执行语句", rec.sqlStatement)
+				fmt.Println("> Region: 执行语句", rec.sqlStatement)
 				//msg, err = sqlite.Exec(rec.sqlStatement)
 				msg, err = sqlite.Exec(rec.sqlStatement, rec.tableName)
 			}
 			//fmt.Println("sqlExec", msg, err)
 			if err != nil {
-				fmt.Println(">>> 出现错误!", err)
+				fmt.Println("> Region:  出现错误: ", err)
 				res.Error = err.Error()
 				res.Message = "NOT OK"
 			}
 			res.Data = msg
 			res.TableList = getTableList()
 			res.ClientIP = rec.ipAddress
-			fmt.Println(">>> res.ClientIP", res.ClientIP)
-			fmt.Println(">>> 得到结果: ", res)
+			fmt.Println("> Region:  res.ClientIP", res.ClientIP)
+			fmt.Println("> Region:  得到结果: ", res)
 			// 返回结果给 master
 			output <- res
 		}
@@ -120,7 +123,7 @@ func input(connMaster net.Conn, input chan receive) {
 	for {
 		msg := make([]byte, 255)
 		msgRead, err := connMaster.Read(msg)
-		fmt.Println(">>> msgRead: ", msgRead)
+		fmt.Println("> Region:  msgRead: ", msgRead)
 		data := make([]byte, msgRead)
 		copy(data, msg)
 		if msgRead == 0 || err != nil {
@@ -134,8 +137,8 @@ func input(connMaster net.Conn, input chan receive) {
 				File:      make([]string, 0),
 			}
 			json.Unmarshal(data, &request)
-			fmt.Println(">>> request.IpAddress", request.IpAddress)
-			fmt.Println(">>> 收到请求: ", request.IpAddress, request.Kind, request.Sql)
+			fmt.Println("> Region: request.IpAddress", request.IpAddress)
+			fmt.Println("> Region: 收到请求: ", request.IpAddress, request.Kind, request.Sql)
 
 			if request.Kind == "new" {
 				temp := &receive{
@@ -180,7 +183,7 @@ func output(connMaster net.Conn, output chan result) {
 		case outPutMsg := <-output:
 			//通信返回结果
 
-			fmt.Println(">>> 返回给 Master: ", outPutMsg)
+			fmt.Println("> Region: 返回给 Master: ", outPutMsg)
 			msgStr, _ := json.Marshal(outPutMsg)
 			//fmt.Println("msgStr", msgStr)
 			_, err := connMaster.Write(msgStr)
@@ -198,7 +201,7 @@ func getTableList() (res []string) {
 	for _, val := range rawData {
 		res = append(res, val["name"].(string))
 	}
-	fmt.Println("当前Table", res)
+	fmt.Println("> Region: 当前Table", res)
 	return res
 }
 
