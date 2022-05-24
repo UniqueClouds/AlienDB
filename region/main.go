@@ -43,7 +43,7 @@ const (
 	nonQueryStatement = 2
 	quitStatement     = 3
 	copyStatement     = 4
-	joinStatement     = 5
+	dropStatement     = 5
 	newStatement      = 6
 )
 
@@ -98,6 +98,10 @@ func handle(input chan receive, output chan result) {
 			case queryStatement:
 				fmt.Println("> Region: 查询语句", rec.sqlStatement)
 				msg, err = sqlite.Query(rec.sqlStatement)
+			case dropStatement:
+				fmt.Println("> Region: Drop语句", rec.sqlStatement)
+				msg, err = sqlite.Exec(rec.sqlStatement, rec.tableName)
+				res.Message = "drop ok"
 			case nonQueryStatement:
 				fmt.Println("> Region: 执行语句", rec.sqlStatement)
 				//msg, err = sqlite.Exec(rec.sqlStatement)
@@ -163,6 +167,14 @@ func input(connMaster net.Conn, input chan receive) {
 				temp := &receive{
 					sqlStatement: request.Sql,
 					sqlType:      queryStatement,
+					tableName:    request.TableName,
+					ipAddress:    request.IpAddress,
+				}
+				input <- *temp
+			} else if request.Kind == "drop" {
+				temp := &receive{
+					sqlStatement: request.Sql,
+					sqlType:      dropStatement,
 					tableName:    request.TableName,
 					ipAddress:    request.IpAddress,
 				}

@@ -83,7 +83,7 @@ func sendToMaster(connMaster net.Conn, target *map[string]string) {
 		panic(err)
 	}
 	fmt.Println(">>>消息发送成功！")
-	rawData := make([]byte, 255)
+	rawData := make([]byte, 1024*10)
 	//rawDataCopy := make([]byte, 255)
 	msgRead, err := connMaster.Read(rawData)
 	//msgReadCopy, errCopy := connMaster.Read(rawDataCopy)
@@ -166,16 +166,18 @@ func sendToMaster(connMaster net.Conn, target *map[string]string) {
 
 func connectToMaster() net.Conn {
 	var ip, port string
-	fmt.Println(">>>请输入目标服务器IP：")
-	_, err := fmt.Scan(&ip)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(">>>请输入目标服务器端口号：")
-	_, err = fmt.Scan(&port)
-	if err != nil {
-		panic(err)
-	}
+	//fmt.Println(">>>请输入目标服务器IP：")
+	//_, err := fmt.Scan(&ip)
+	//if err != nil {
+	//	panic(err)
+	//}
+	//fmt.Println(">>>请输入目标服务器端口号：")se
+	//_, err = fmt.Scan(&port)
+	ip = "192.168.119.166"
+	port = "2224"
+	//if err != nil {
+	//	panic(err)
+	//}
 	//var connMaster net.Conn
 	connMaster, err := net.Dial("tcp", ip+":"+port)
 	if err != nil {

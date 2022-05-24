@@ -104,7 +104,7 @@ func RandStringBytes(n int) string {
 
 // RegionRegister 从节点服务注册功能
 func RegionRegister(localAddr string) {
-	var endpoints = []string{"192.168.81.166:2379"}
+	var endpoints = []string{"192.168.119.166:2379"}
 	//var endpoints = []string{"localhost:2379"}
 	//localIP := GetLocalIP()
 	// 暂定名称
