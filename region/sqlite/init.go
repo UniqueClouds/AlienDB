@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"strings"
 	//"fmt"
 )
 
@@ -27,19 +28,30 @@ func init() {
 	//dbName := RandStringBytes(4) + ".db"
 	//fmt.Println(">>> dbName: ", dbName)
 	db, err = sql.Open("sqlite3", "./foo2.db")
-	row, err := db.Query("SELECT name FROM sqlite_master WHERE type = 'table';")
-	//fmt.Println(res)
+	dropAllTable()
+	checkErr(err)
+}
+
+func dropAllTable() {
+	rows, err := Query("SELECT name FROM sqlite_master WHERE type = 'table';")
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer row.Close()
-
-	for row.Next() {
-		var name string
-		row.Scan(&name)
-		fmt.Println("drop Table Name ", name)
-		db.Exec("DROP TABLE IF EXISTS " + name)
+	//fmt.Println(rows)
+	var names []string
+	for _, val := range rows {
+		//fmt.Println("val", val["name"])
+		names = append(names, val["name"].(string))
 	}
-	//fmt.Println(db)
-	checkErr(err)
+	for _, name := range names {
+		if strings.Compare(name, "sqlite_sequence") == 0 {
+			continue
+		}
+		fmt.Println("drop table ", name)
+		_, err := db.Exec("DROP table if exists " + name + ";")
+		//fmt.Println("exec", exec)
+		if err != nil {
+			fmt.Println("err: ", err)
+		}
+	}
 }

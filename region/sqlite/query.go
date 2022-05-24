@@ -1,8 +1,6 @@
 package sqlite
 
 import (
-	"fmt"
-
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -45,6 +43,6 @@ func Query(sqlstring string) ([]map[string]interface{}, error) {
 		//resString = fmt.Sprintf("%s\n%v", resString, s)
 	}
 	//region test
-	fmt.Println(m)
+	//fmt.Println(m)
 	return m, nil
 }
