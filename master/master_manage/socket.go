@@ -43,6 +43,7 @@ func GetLocalIP() string {
 }
 
 func ListenClient() {
+	fmt.Println("hahaha it's wclulu's branch : ")
 	tcpAddr, err := net.ResolveTCPAddr("tcp", ":2224")
 	if err != nil {
 		fmt.Println("client net.tcpAddr error : ", err)
