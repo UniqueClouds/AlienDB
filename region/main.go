@@ -134,7 +134,7 @@ func input(connMaster net.Conn, input chan receive) {
 		data := make([]byte, msgRead)
 		copy(data, msg)
 		if msgRead == 0 || err != nil {
-			panic(err)
+			fmt.Println(err)
 		} else {
 			request := regionRequest{
 				TableName: "",

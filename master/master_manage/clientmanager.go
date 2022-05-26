@@ -2,7 +2,7 @@ package master
 
 type clientInfo struct {
 	ipAddress   string
-	resultQueue chan clientResult
+	resultQueue chan middleResult
 }
 
 type clientList []*clientInfo

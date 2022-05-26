@@ -7,11 +7,13 @@ import (
 )
 
 type IpAddressInfo struct {
-	ipAddress    string // The value of the item; arbitrary.
-	tableNumber  int    // The priority of the item in the queue.
-	requestQueue chan regionRequest
-	receiveQueue chan regionResult
-	index        int // The index of the item in the heap.
+	ipAddress        string // The value of the item; arbitrary.
+	tableNumber      int    // The priority of the item in the queue.
+	requestQueue     chan regionRequest
+	receiveQueue     chan regionResult
+	copyRequestQueue chan string
+	copyInfoQueue    chan string
+	index            int // The index of the item in the heap.
 }
 
 type PriorityQueue []*IpAddressInfo
@@ -73,11 +75,10 @@ func (pq *PriorityQueue) getCopyRegion(aliveIp string) string {
 }
 
 func removeRegion(pq PriorityQueue, ipAddress string) PriorityQueue {
-	index := 0
-	for ; index < pq.Len(); index++ {
-		if ipAddress == pq[index].ipAddress {
-			break
-		}
+	index := pq.find(ipAddress)
+	if index == -1 {
+		fmt.Printf("> Master: There is no region(%s).\n", ipAddress)
+		return pq
 	}
 	return append(pq[:index], pq[index+1:]...)
 }

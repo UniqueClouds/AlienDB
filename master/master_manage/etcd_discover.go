@@ -2,11 +2,13 @@ package master
 
 import (
 	"context"
-	"go.etcd.io/etcd/api/v3/mvccpb"
-	clientv3 "go.etcd.io/etcd/client/v3"
+	"fmt"
 	"log"
 	"sync"
 	"time"
+
+	"go.etcd.io/etcd/api/v3/mvccpb"
+	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
 var copyInfoChannel chan []copyTableInfo
@@ -57,7 +59,6 @@ func (s *ServiceDiscovery) WatchService() error {
 func (s *ServiceDiscovery) watcher() {
 	prefix := "/db/"
 	rch := s.cli.Watch(context.Background(), prefix, clientv3.WithPrefix())
-	log.Printf("watching prefix:%s now ...", prefix)
 	for wresp := range rch {
 		for _, ev := range wresp.Events {
 			switch ev.Type {
@@ -65,9 +66,14 @@ func (s *ServiceDiscovery) watcher() {
 				s.SetServiceList(string(ev.Kv.Key), string(ev.Kv.Value))
 			case mvccpb.DELETE: // 删除
 				ip := s.serverList[string(ev.Kv.Key)]
-				log.Println("Region lost, delete ip: ", ip)
+				fmt.Println("> Master: Region lost, delete ip: ", ip)
+				regionQueue = removeRegion(regionQueue, ip)
+				fmt.Printf("> Master: Tere are now %d region connections.\n", regionQueue.Len())
 				s.DelServiceList(string(ev.Kv.Key))
-				copyInfoChannel <- tableQueue.downRegionIp(ip)
+				copyList := tableQueue.downRegionIp(ip)
+				for _, copyTable := range copyList {
+					regionQueue[regionQueue.find(copyTable.aliveRegion)].copyRequestQueue <- copyTable.tableName
+				}
 			}
 		}
 	}
@@ -78,8 +84,7 @@ func (s *ServiceDiscovery) SetServiceList(key, val string) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	s.serverList[key] = string(val)
-	//fmt.Println(">>> etcd: put key :", key, "val", val)
-	log.Println("put key :", key, "val:", val)
+	fmt.Println("> Master: [etcd] put key :", key, "val", val)
 }
 
 //DelServiceList 删除服务地址
@@ -87,8 +92,7 @@ func (s *ServiceDiscovery) DelServiceList(key string) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	delete(s.serverList, key)
-	//fmt.Println(">>> etcd: del key", key)
-	log.Println("del key", key)
+	fmt.Println("> Master: [etcd] del key", key)
 }
 
 //GetServices 获取服务地址
@@ -116,7 +120,7 @@ func RunServiceDiscovery() {
 	for {
 		select {
 		case <-time.Tick(10 * time.Second):
-			log.Println(ser.GetServices())
+			ser.GetServices()
 		}
 	}
 }

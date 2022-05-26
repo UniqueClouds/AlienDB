@@ -10,6 +10,8 @@ require (
 	golang.org/x/sys v0.0.0-20211117180635-dee7805ff2e1 // indirect
 )
 
+require client v0.0.0-00010101000000-000000000000
+
 require (
 	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.3.2 // indirect
