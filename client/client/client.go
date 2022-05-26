@@ -167,7 +167,7 @@ func sendToMaster(connMaster net.Conn, target *map[string]string) {
 func connectToMaster() net.Conn {
 
 	var ip, port string
-	ip = "192.168.119.166"
+	ip = "localhost"
 	port = "2224"
 	fmt.Println(">>>请输入目标服务器IP：")
 	_, err := fmt.Scan(&ip)

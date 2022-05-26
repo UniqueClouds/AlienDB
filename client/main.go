@@ -1,6 +1,7 @@
-package client
+package main
 
 import (
+	"client/client"
 	"encoding/json"
 	"fmt"
 )
@@ -18,5 +19,5 @@ func Test() {
 }
 
 func main() {
-	RunClient()
+	client.RunClient()
 }
